@@ -1,4 +1,5 @@
 numpy
 matplotlib
 scipy
-pytorch
+pytorch>=3.5
+pytorch-lightning>=0.8
