@@ -47,7 +47,7 @@ class Reaction(ReactionProblem):
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = ReactionProblem.add_model_specific_args(parent_parser)
-        parser.add_argument('--lr', type=float, default=1e-3)
+        parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
         return parser
 
 

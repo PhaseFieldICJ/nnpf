@@ -101,11 +101,11 @@ class ReactionProblem(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument('--epsilon', type=float, default=2/8**3)
-        parser.add_argument('--dt', type=float, default=None)
-        parser.add_argument('--margin', type=float, default=0.1)
-        parser.add_argument('--Ntrain', type=int, default=100)
-        parser.add_argument('--Nval', type=int, default=None)
-        parser.add_argument('--batch_size', type=int, default=None)
+        parser.add_argument('--epsilon', type=float, default=2/8**3, help="Interface sharpness")
+        parser.add_argument('--dt', type=float, default=None, help="Time step")
+        parser.add_argument('--margin', type=float, default=0.1, help="[0, 1] expanding length")
+        parser.add_argument('--Ntrain', type=int, default=100, help="Size of the training dataset")
+        parser.add_argument('--Nval', type=int, default=None, help="Size of the validatio dataset (10*Ntrain if None")
+        parser.add_argument('--batch_size', type=int, default=None, help="Size of batch")
         return parser
 
