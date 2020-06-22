@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, TensorDataset
 import pytorch_lightning as pl
 import math
 
-from argparse import ArgumentParser
+import argparse
 
 def _exact_sol_c(s, dt, epsilon):
     return math.exp(-dt / epsilon**2) * s * (1 - s) / (1 - 2 * s)**2
@@ -95,7 +95,7 @@ class ReactionProblem(pl.LightningModule):
 
     def val_dataloader(self):
         """ Returns the validation data loader """
-        return DataLoader(self.val_dataset, batch_size=self.batch_size if not None else self.Nval)
+        return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size or self.hparams.Nval)
 
     def validation_step(self, batch, batch_idx):
         """ Called at each batch of the validation data """
@@ -106,16 +106,21 @@ class ReactionProblem(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         """ Called at epoch end of the validation step (after all batches) """
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-        return {'val_loss': avg_loss}
+        return {'val_loss': avg_loss, 'log': {'val_loss': avg_loss}}
 
     @staticmethod
     def add_model_specific_args(parent_parser):
-        parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument('--epsilon', type=float, default=2/8**3, help="Interface sharpness")
-        parser.add_argument('--dt', type=float, default=None, help="Time step")
-        parser.add_argument('--margin', type=float, default=0.1, help="[0, 1] expanding length")
-        parser.add_argument('--Ntrain', type=int, default=100, help="Size of the training dataset")
-        parser.add_argument('--Nval', type=int, default=None, help="Size of the validatio dataset (10*Ntrain if None")
-        parser.add_argument('--batch_size', type=int, default=None, help="Size of batch")
+        parser = argparse.ArgumentParser(
+            parents=[parent_parser],
+            add_help=False,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+        group = parser.add_argument_group("Reaction problem", "Options common to all models of the reaction term.")
+        group.add_argument('--epsilon', type=float, default=2/8**3, help="Interface sharpness")
+        group.add_argument('--dt', type=float, default=None, help="Time step (epsilon**2 if None)")
+        group.add_argument('--margin', type=float, default=0.1, help="[0, 1] expansion length")
+        group.add_argument('--Ntrain', type=int, default=100, help="Size of the training dataset")
+        group.add_argument('--Nval', type=int, default=None, help="Size of the validation dataset (10*Ntrain if None)")
+        group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
         return parser
 

@@ -9,7 +9,7 @@ from pytorch_lightning import Trainer
 import nn_models
 from reaction_problem import ReactionProblem
 
-from argparse import ArgumentParser
+import argparse
 
 class Reaction(ReactionProblem):
 
@@ -49,15 +49,18 @@ class Reaction(ReactionProblem):
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = ReactionProblem.add_model_specific_args(parent_parser)
-        parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
+        group = parser.add_argument_group("Reaction model", "Options specific to this model")
+        group.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
         return parser
 
 
 if __name__ == "__main__":
 
-    parser = ArgumentParser()
-    parser = Reaction.add_model_specific_args(parser)
+    parser = argparse.ArgumentParser(
+        description="Model of the reaction operator of the Allen-Cahn equation",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = Trainer.add_argparse_args(parser)
+    parser = Reaction.add_model_specific_args(parser)
     args = parser.parse_args()
 
     from nn_models import GaussActivation
@@ -70,3 +73,4 @@ if __name__ == "__main__":
     print(model.hparams.batch_size)
 
     trainer.fit(model)
+
