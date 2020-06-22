@@ -64,11 +64,8 @@ class ReactionProblem(pl.LightningModule):
         super().__init__()
 
         # Default values
-        if dt is None:
-            dt = epsilon**2
-
-        if Nval is None:
-            Nval = 10 * Ntrain
+        dt = dt or epsilon**2
+        Nval = Nval or 10 * Ntrain
 
         # Hyper-parameters (used for saving/loading the module)
         self.save_hyperparameters('dt', 'epsilon', 'margin', 'Ntrain', 'Nval', 'batch_size')
