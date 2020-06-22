@@ -70,7 +70,6 @@ if __name__ == "__main__":
     layers=((GaussActivation(), 8), (GaussActivation(), 4))
     model = Reaction(layers, **vars(args))
 
-    print(model.hparams.batch_size)
 
     trainer.fit(model)
 
