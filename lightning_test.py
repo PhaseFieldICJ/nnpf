@@ -62,8 +62,7 @@ if __name__ == "__main__":
 
     from nn_models import GaussActivation
 
-    early_stopping = pl.callbacks.early_stopping.EarlyStopping('loss', patience=10)
-    trainer = Trainer.from_argparse_args(args, early_stop_callback=early_stopping)
+    trainer = Trainer.from_argparse_args(args, early_stop_callback=True)
 
     layers=((GaussActivation(), 8), (GaussActivation(), 4))
     model = Reaction(layers, **vars(args))

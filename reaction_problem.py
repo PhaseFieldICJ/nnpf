@@ -73,7 +73,6 @@ class ReactionProblem(pl.LightningModule):
         # Hyper-parameters (used for saving/loading the module)
         self.save_hyperparameters('dt', 'epsilon', 'margin', 'Ntrain', 'Nval', 'batch_size')
 
-
     def prepare_data(self):
         """ Prepare training and validation data """
 
@@ -94,9 +93,20 @@ class ReactionProblem(pl.LightningModule):
         """ Returns the training data loader """
         return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size or self.hparams.Ntrain)
 
-    #def val_dataloader(self):
-    #    """ Returns the validation data loader """
-    #    return DataLoader(self.val_dataset, batch_size=self.batch_size if not None else self.Nval)
+    def val_dataloader(self):
+        """ Returns the validation data loader """
+        return DataLoader(self.val_dataset, batch_size=self.batch_size if not None else self.Nval)
+
+    def validation_step(self, batch, batch_idx):
+        """ Called at each batch of the validation data """
+        data, target = batch
+        output = self(data)
+        return {'val_loss': torch.nn.functional.mse_loss(output, target)}
+
+    def validation_epoch_end(self, outputs):
+        """ Called at epoch end of the validation step (after all batches) """
+        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
+        return {'val_loss': avg_loss}
 
     @staticmethod
     def add_model_specific_args(parent_parser):
