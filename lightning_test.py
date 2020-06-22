@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import torch
 import torch.nn as nn
 
@@ -39,7 +41,7 @@ class Reaction(ReactionProblem):
         data, target = batch
         output = self.forward(data)
         loss = torch.nn.functional.mse_loss(output, target)
-        return {'loss': loss}
+        return {'loss': loss, 'log': {'train_loss': loss}}
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
