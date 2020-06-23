@@ -15,7 +15,7 @@ import argparse
 
 class Reaction(ReactionProblem):
 
-    def __init__(self, layer_dims=[8, 3], activation='GaussActivation', lr=1e-3, **kwargs):
+    def __init__(self, layer_dims=[8, 3], activation='GaussActivation', **kwargs):
         """ Constructor
 
         Parameters
@@ -24,8 +24,6 @@ class Reaction(ReactionProblem):
             Working dimensions of the hidden layers
         activation: str
             Name of the activation function class
-        lr: float
-            Learning rate of the optimizer
         kwargs: dict
             Parameters passed to reaction_problem.ReactionProblem
         """
@@ -43,20 +41,10 @@ class Reaction(ReactionProblem):
     def forward(self, x):
         return self.model(x)
 
-    def training_step(self, batch, batch_idx):
-        data, target = batch
-        output = self.forward(data)
-        loss = torch.nn.functional.mse_loss(output, target)
-        return {'loss': loss, 'log': {'train_loss': loss}}
-
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
-
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = ReactionProblem.add_model_specific_args(parent_parser)
         group = parser.add_argument_group("Reaction model", "Options specific to this model")
-        group.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
         group.add_argument('--layer_dims', type=int, nargs='+', default=[8, 3], help='Sizes of the hidden layers')
         group.add_argument('--activation', type=str, default='GaussActivation', help='Name of the activation function')
         return parser

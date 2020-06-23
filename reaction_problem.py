@@ -42,7 +42,7 @@ class ReactionProblem(pl.LightningModule):
     Features the train and validation data.
     """
 
-    def __init__(self, epsilon=2/2**8, dt=None, margin=0.1, Ntrain=100, Nval=None, batch_size=None, **kwargs):
+    def __init__(self, epsilon=2/2**8, dt=None, margin=0.1, Ntrain=100, Nval=None, batch_size=None, lr=1e-3, **kwargs):
         """ Constructor
 
         Parameters
@@ -59,6 +59,8 @@ class ReactionProblem(pl.LightningModule):
             Number of samples for the validation step. 10*Ntrain if None.
         batch_size: int
             Size of the batch during training and validation steps. Full data if None.
+        lr: float
+            Learning rate of the optimizer
         """
 
         super().__init__()
@@ -68,7 +70,24 @@ class ReactionProblem(pl.LightningModule):
         Nval = Nval or 10 * Ntrain
 
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('dt', 'epsilon', 'margin', 'Ntrain', 'Nval', 'batch_size')
+        self.save_hyperparameters('dt', 'epsilon', 'margin', 'Ntrain', 'Nval', 'batch_size', 'lr')
+
+    def training_step(self, batch, batch_idx):
+        """ Default training step with custom loss function """
+        data, target = batch
+        output = self.forward(data)
+
+        try:
+            loss = self.loss_fn(output, target)
+        except AttributeError:
+            loss = torch.nn.functional.mse_loss(output, target)
+
+        return {'loss': loss, 'log': {'train_loss': loss}, 'progress_bar': {'train_loss': loss}}
+
+    def configure_optimizers(self):
+        """ Default optimizer """
+        return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+
 
     def prepare_data(self):
         """ Prepare training and validation data """
@@ -103,7 +122,8 @@ class ReactionProblem(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         """ Called at epoch end of the validation step (after all batches) """
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-        return {'val_loss': avg_loss, 'log': {'val_loss': avg_loss}}
+        val_loss = {'val_loss': avg_loss}
+        return {**val_loss, 'log': val_loss, 'progress_bar': val_loss}
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -119,5 +139,6 @@ class ReactionProblem(pl.LightningModule):
         group.add_argument('--Ntrain', type=int, default=100, help="Size of the training dataset")
         group.add_argument('--Nval', type=int, default=None, help="Size of the validation dataset (10*Ntrain if None)")
         group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
+        group.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
         return parser
 
