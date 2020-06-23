@@ -170,3 +170,27 @@ def get_model_by_name(name):
 
     raise AttributeError(f"Model {name} not found")
 
+
+def get_derivatives(model, t, order=1):
+    """
+    Calculates the derivatives of a R -> R^N model up to a given order
+
+    Parameters
+    ----------
+    model: any
+        Model of a R - R^N function
+    t: number
+        Evaluation point of the derivatives
+    order: int
+        Maximum derivative order.
+
+    Returns
+    -------
+    derivatives: list of tensors
+        Model derivatives from order 0 to given maximal order.
+    """
+    output = [model(t)]
+    for i in range(order):
+        output.append(torch.autograd.grad(output[-1], [t], torch.ones_like(t), create_graph=True)[0])
+    return output
+
