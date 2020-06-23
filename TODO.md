@@ -1,3 +1,4 @@
 - custom format of loss in progress bar (more that 3 digits...) -> SOLVED by adding `train_loss` and `val_loss` to progress bar
 - add metric to TensorBoard (to compare hyper parameters sets)
 - add resulting images to log ?
+- automatic loading of last checkpoint when giving folder instead of file
