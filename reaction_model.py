@@ -31,7 +31,7 @@ class Reaction(ReactionProblem):
         super().__init__(**kwargs)
 
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('layer_dims', 'activation', 'lr')
+        self.save_hyperparameters('layer_dims', 'activation')
 
         # Model
         activation_class = nn_toolbox.get_model_by_name(self.hparams.activation)
@@ -60,7 +60,6 @@ if __name__ == "__main__":
     parser = Reaction.add_model_specific_args(parser)
     parser.add_argument('--version', default=None, help="Experiment version (logger)")
     args = parser.parse_args()
-
 
     # Model, training & fit
     model = Reaction(**vars(args))
