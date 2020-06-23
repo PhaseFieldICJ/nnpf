@@ -144,3 +144,29 @@ def reshape_for_torch(x, array_like=None, data_dim=None):
     # Reshape and insert color channel dimension
     return x.reshape(new_shape)[:, None, ...]
 
+
+def get_model_by_name(name):
+    """ Return model class given its name.
+
+    Search in global namespace, nn_models and torch.nn.
+    """
+
+    try:
+        return globals()[name]
+    except KeyError:
+        pass
+
+    try:
+        import nn_models
+        return getattr(nn_models, name)
+    except AttributeError:
+        pass
+
+    try:
+        import torch.nn
+        return getattr(torch.nn, name)
+    except AttributeError:
+        pass
+
+    raise AttributeError(f"Model {name} not found")
+
