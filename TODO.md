@@ -3,4 +3,7 @@
 - add resulting images to log ?
 - automatic loading of last checkpoint when giving folder instead of file
 - add loaded checkpoints in hyper-parameters.
-- adding hyper-parameters of loader models in main model hyper-parmeters?
+- adding hyper-parameters of loaded models in main model hyper-parmeters?
+- fixed width for train and validation loss in the progress bar
+- CHECK Convolution classes & add `flat_meshgrid`
+- shapes using torch.Tensor
