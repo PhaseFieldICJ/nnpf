@@ -10,34 +10,46 @@ import math
 
 import argparse
 
-def _exact_sol_c(s, dt, epsilon):
-    return math.exp(-dt / epsilon**2) * s * (1 - s) / (1 - 2 * s)**2
-
-
-def exact_sol(s, dt, epsilon):
-    """ Exact solution for the reaction term
-
-    EDO
+class ReactionSolution:
+    """
+    Exact solution for the reaction operator of the Allen-Cahn equation
     """
 
-    result = torch.empty_like(s)
-    sign = torch.sign(s - 0.5)
+    def __init__(self, epsilon=2/2**8, dt=None):
+        """ Constructor
 
-    result[s == 0.5] = 0.5
+        Parameters
+        ----------
+        epsilon: float
+            Interface sharpness in phase field model
+        dt: float
+            Time step. epsilon**2 if None.
+        """
+        self.epsilon = epsilon
+        self.dt = dt or self.epsilon**2
 
-    a = torch.sqrt(1 + 4 * _exact_sol_c(s[s < 0.5], dt, epsilon))
-    result[s < 0.5] = 1 - (a + 1) / (2 * a)
+    def __call__(self, u):
+        """ Returns u(t + dt) from u(t) """
+        result = torch.empty_like(u)
+        dt, epsilon = self.dt, self.epsilon
 
-    a = torch.sqrt(1 + 4 * _exact_sol_c(s[s > 0.5], dt, epsilon))
-    result[s > 0.5] = (a + 1) / (2 * a)
+        def helper(u):
+            return torch.as_tensor(-dt / epsilon**2).exp() * u * (1 - u) / (1 - 2 * u)**2
 
-    return result
+        result[u == 0.5] = 0.5
 
+        a = torch.sqrt(1 + 4 * helper(u[u < 0.5]))
+        result[u < 0.5] = 1 - (a + 1) / (2 * a)
+
+        a = torch.sqrt(1 + 4 * helper(u[u > 0.5]))
+        result[u > 0.5] = (a + 1) / (2 * a)
+
+        return result
 
 
 class ReactionProblem(pl.LightningModule):
     """
-    Base class for the Allen-Cahn reation term learning problem
+    Base class for the Allen-Cahn reaction term learning problem
 
     Features the train and validation data.
     """
@@ -88,21 +100,21 @@ class ReactionProblem(pl.LightningModule):
         """ Default optimizer """
         return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
 
-
     def prepare_data(self):
         """ Prepare training and validation data """
 
         lower_bound = 0. - self.hparams.margin
         upper_bound = 1. + self.hparams.margin
+        exact_sol = ReactionSolution(self.hparams.epsilon, self.hparams.dt)
 
         # Training dataset
         train_x = torch.linspace(lower_bound, upper_bound, self.hparams.Ntrain)[:, None]
-        train_y = exact_sol(train_x, self.hparams.dt, self.hparams.epsilon)
+        train_y = exact_sol(train_x)
         self.train_dataset = TensorDataset(train_x, train_y)
 
         # Validation dataset
         val_x = torch.linspace(lower_bound, upper_bound, self.hparams.Nval)[:, None]
-        val_y = exact_sol(val_x, self.hparams.dt, self.hparams.epsilon)
+        val_y = exact_sol(val_x)
         self.val_dataset = TensorDataset(val_x, val_y)
 
     def train_dataloader(self):
