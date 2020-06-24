@@ -7,8 +7,9 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 import pytorch_lightning as pl
 import math
-
 import argparse
+
+from nn_toolbox import dispatch_metrics
 
 class ReactionSolution:
     """
@@ -94,7 +95,7 @@ class ReactionProblem(pl.LightningModule):
         except AttributeError:
             loss = torch.nn.functional.mse_loss(output, target)
 
-        return {'loss': loss, 'log': {'train_loss': loss}, 'progress_bar': {'train_loss': loss}}
+        return dispatch_metrics({'loss': loss})
 
     def configure_optimizers(self):
         """ Default optimizer """
@@ -135,7 +136,7 @@ class ReactionProblem(pl.LightningModule):
         """ Called at epoch end of the validation step (after all batches) """
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
         val_loss = {'val_loss': avg_loss}
-        return {**val_loss, 'log': val_loss, 'progress_bar': val_loss}
+        return dispatch_metrics({'val_loss': avg_loss})
 
     @staticmethod
     def add_model_specific_args(parent_parser):
