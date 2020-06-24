@@ -23,11 +23,6 @@ def sphere(center, radius):
     return dist
 
 
-def sphere_mean_curvature(center, radius, t=0):
-    """ Signed distance to a sphere evolving by mean curvature field """
-    return sphere(center, np.sqrt(radius**2 - 2 * t))
-
-
 ###############################################################################
 # Operations
 
