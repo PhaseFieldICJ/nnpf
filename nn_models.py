@@ -146,14 +146,30 @@ class ConvolutionArray(torch.nn.Module):
         self.Convolution.bias = new_bias
 
 
+###############################################################################
+# Testing
+
+import numpy as np
+
+def flat_coords_array(*args):
+    """ Flatten and stack array of coordinates (e.g. meshgrid output) """
+    return np.stack(tuple(np.ravel(coords) for coords in args), axis=1)
+
+
+def flat_meshgrid(*args):
+    """ Flatten and stack meshgrid's output to be used as model input """
+    return flat_coords_array(*np.meshgrid(*args))
+
+###############################################################################
+
 class ConvolutionFunction(torch.nn.Module):
     """
     Model a discrete convolution kernel as the discretization of a function
 
-    FIXME: WIP
+    FIXME: WIP, not tested
     """
 
-    def __init__(self, function, kernel_size, in_channels=1, out_channels=1, stride=1, padding='center', dilation=1, groups=1, bias=False):
+    def __init__(self, function, kernel_size, in_channels=1, out_channels=1, stride=1, padding='center', padding_mode='zeros', dilation=1, groups=1, bias=False):
         """
         Parameters:
         -----------
@@ -169,6 +185,8 @@ class ConvolutionFunction(torch.nn.Module):
             Stride of the convolution
         padding: int or tuple
             Zero-padding added to both sides of the input. 'center' to center the kernel
+        padding_mode: string
+            'zeros', 'reflect', 'replicate' or 'circular'
         dilation: int
             Spacing between kernel elements
         groups: int
@@ -185,6 +203,7 @@ class ConvolutionFunction(torch.nn.Module):
         self.stride = stride
         self.dilation = dilation
         self.groups = groups
+        self.padding_mode = padding_mode
 
         # Kernel size
         if type(kernel_size) == int:
@@ -197,7 +216,7 @@ class ConvolutionFunction(torch.nn.Module):
         if padding == 'center':
             self.padding = tuple(s//2 for s in self.kernel_size)
         elif type(padding) == int:
-            self.padding = padding,
+            self.padding = [padding] * dim
         else:
             self.padding = padding
 
@@ -226,20 +245,32 @@ class ConvolutionFunction(torch.nn.Module):
         # 2) repeat using meshgrid along remaining axis
         # 3) flatten each index array
         # 4) concatenate each index vectors
-        device = next(self.function.parameters()).device
+        #device = next(self.function.parameters()).device
         #tmp = torch.meshgrid(*(torch.arange(s, dtype=torch.float, device=device) - (s-1)/2 for s in self.kernel_size))
         #self.pos = torch.cat((torch.flatten(index) for index in tmp), dim=1).view(-1, 1, dim)
-        self.pos = torch.tensor(flat_meshgrid(*(np.arange(s) - (s-1)/2 for s in self.kernel_size)), dtype=torch.float, device=device)
+        #self.pos = torch.tensor(flat_meshgrid(*(np.arange(s) - (s-1)/2 for s in self.kernel_size)), dtype=torch.float, device=device)
+        self.pos = torch.Tensor(flat_meshgrid(*(np.arange(s) - (s-1)/2 for s in self.kernel_size)))
 
     def forward(self, x):
-        return self.convolution(
-            x,
-            self.weight,
-            bias=self.bias,
-            stride=self.stride,
-            padding=self.padding,
-            dilation=self.dilation,
-            groups=self.groups)
+        if self.padding_mode == 'zeros':
+            return self.convolution(
+                x,
+                self.weight,
+                bias=self.bias,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                groups=self.groups)
+        else:
+            return self.convolution(
+                torch.nn.functional.pad(x, tuple(i for p in self.padding[::-1] for i in [p, p]), mode=self.padding_mode), # See documentation of torch.nn.functional.pad
+                self.weight,
+                bias=self.bias,
+                stride=self.stride,
+                padding=0, # Already padded
+                dilation=self.dilation,
+                groups=self.groups)
+
 
     @property
     def weight(self):
