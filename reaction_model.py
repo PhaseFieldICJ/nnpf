@@ -61,9 +61,15 @@ if __name__ == "__main__":
     parser.add_argument('--version', default=None, help="Experiment version (logger)")
     args = parser.parse_args()
 
+    # Deterministic calculation
+    try:
+        deterministic = args.seed is not None
+    except AttributeError:
+        deterministic = False
+
     # Model, training & fit
     model = Reaction(**vars(args))
     logger = TensorBoardLogger("logs", name="Reaction", version=args.version)
-    trainer = Trainer.from_argparse_args(args, logger=logger, early_stop_callback=True)
+    trainer = Trainer.from_argparse_args(args, logger=logger, early_stop_callback=True, deterministic=deterministic)
     trainer.fit(model)
 

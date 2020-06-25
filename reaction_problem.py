@@ -55,7 +55,7 @@ class ReactionProblem(pl.LightningModule):
     Features the train and validation data.
     """
 
-    def __init__(self, epsilon=2/2**8, dt=None, margin=0.1, Ntrain=100, Nval=None, batch_size=None, lr=1e-3, **kwargs):
+    def __init__(self, epsilon=2/2**8, dt=None, margin=0.1, Ntrain=100, Nval=None, batch_size=None, lr=1e-3, seed=None, **kwargs):
         """ Constructor
 
         Parameters
@@ -74,6 +74,8 @@ class ReactionProblem(pl.LightningModule):
             Size of the batch during training and validation steps. Full data if None.
         lr: float
             Learning rate of the optimizer
+        seed: int
+            If set to an integer, use it as seed of all random generators.
         """
 
         super().__init__()
@@ -83,7 +85,13 @@ class ReactionProblem(pl.LightningModule):
         Nval = Nval or 10 * Ntrain
 
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('dt', 'epsilon', 'margin', 'Ntrain', 'Nval', 'batch_size', 'lr')
+        self.save_hyperparameters('dt', 'epsilon', 'margin', 'Ntrain', 'Nval', 'batch_size', 'lr', 'seed')
+
+        # Seed random generators
+        if self.hparams.seed is not None:
+            pl.seed_everything(self.hparams.seed)
+            # Should also enable deterministic behavior in the trainer parameters
+
 
     def training_step(self, batch, batch_idx):
         """ Default training step with custom loss function """
@@ -152,6 +160,7 @@ class ReactionProblem(pl.LightningModule):
         group.add_argument('--Ntrain', type=int, default=100, help="Size of the training dataset")
         group.add_argument('--Nval', type=int, default=None, help="Size of the validation dataset (10*Ntrain if None)")
         group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
-        group.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
+        group.add_argument('--lr', type=float, default=1e-3, help="Learning rate")
+        group.add_argument('--seed', type=int, default=None, help="Seed the random generators and disable non-deterministic behavior")
         return parser
 
