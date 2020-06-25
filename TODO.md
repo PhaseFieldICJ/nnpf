@@ -7,3 +7,4 @@
 - fixed width for train and validation loss in the progress bar
 - CHECK Convolution classes & add `flat_meshgrid`
 - shapes using torch.Tensor
+- base Trainer with deterministic switch and logger version
