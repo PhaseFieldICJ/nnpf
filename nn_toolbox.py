@@ -45,18 +45,6 @@ def gen_function_layers(m, n, *activation_fn):
     yield torch.nn.Linear(curr_dim, n, bias=True)
 
 
-def manual_seed(seed):
-    """ Set the seed for a determinist use of Numpy and PyTorch
-
-    Parameters
-    ----------
-    seed: uint32
-        Seed for Numpy  and PyTorch
-    """
-    np.random.seed(seed)
-    torch.manual_seed(np.random.randint(np.iinfo(np.uint32).max))
-
-
 def ndof(model):
     """ Number of Degree Of Freedom of a model
 
