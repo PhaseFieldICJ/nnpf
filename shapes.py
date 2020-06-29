@@ -3,14 +3,29 @@ Signed distances functions and tools
 
 Example
 -------
->>> import numpy as np
->>> import shapes
->>> X, Y = np.meshgrid(np.linspace(0, 1, 101), np.linspace(0, 1, 101))
->>> s = shapes.sphere([0.3, 0.5], 0.2)
->>> dist = s(X, Y)
+>>> X, Y = torch.meshgrid(torch.linspace(0, 1, 5), torch.linspace(0, 1, 5))
+>>> s = sphere([0.5, 0.5], 0.25)
+>>> s(X, Y)
+tensor([[ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571],
+        [ 0.3090,  0.1036,  0.0000,  0.1036,  0.3090],
+        [ 0.2500,  0.0000, -0.2500,  0.0000,  0.2500],
+        [ 0.3090,  0.1036,  0.0000,  0.1036,  0.3090],
+        [ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571]])
+>>> X, Y = torch.meshgrid(torch.linspace(0, 2, 9), torch.linspace(0, 1, 5))
+>>> s2 = union(s, translation(s, (1, 0)))
+>>> s2(X, Y)
+tensor([[ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571],
+        [ 0.3090,  0.1036,  0.0000,  0.1036,  0.3090],
+        [ 0.2500,  0.0000, -0.2500,  0.0000,  0.2500],
+        [ 0.3090,  0.1036,  0.0000,  0.1036,  0.3090],
+        [ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571],
+        [ 0.3090,  0.1036,  0.0000,  0.1036,  0.3090],
+        [ 0.2500,  0.0000, -0.2500,  0.0000,  0.2500],
+        [ 0.3090,  0.1036,  0.0000,  0.1036,  0.3090],
+        [ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571]])
 """
 
-import numpy as np
+import torch
 
 ###############################################################################
 # Shapes
@@ -18,7 +33,7 @@ import numpy as np
 def sphere(center, radius):
     """ Signed distance to a sphere """
     def dist(*X):
-        return np.sqrt(sum((X[i] - center[i])**2 for i in range(len(X)))) - radius
+        return torch.sqrt(sum((X[i] - center[i])**2 for i in range(len(X)))) - radius
 
     return dist
 
@@ -29,7 +44,7 @@ def sphere(center, radius):
 def union(*shapes):
     """ Union of shapes (not exact) """
     def dist(*X):
-        return np.minimum(*(shape(*X) for shape in shapes))
+        return torch.min(*(shape(*X) for shape in shapes))
 
     return dist
 
@@ -37,7 +52,7 @@ def union(*shapes):
 def intersection(*shapes):
     """ Intersection of shapes (not exact) """
     def dist(*X):
-        return np.maximum(*(shape(*X) for shape in shapes))
+        return torch.max(*(shape(*X) for shape in shapes))
 
     return dist
 

@@ -4,6 +4,5 @@
 - add loaded checkpoints in hyper-parameters.
 - adding hyper-parameters of loaded models in main model hyper-parameters?
 - CHECK Convolution classes & add `flat_meshgrid`
-- shapes using torch.Tensor
 - base Trainer with deterministic switch and logger version
 - disable seed when loading checkpoint of seeded model.
