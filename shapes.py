@@ -96,6 +96,7 @@ def periodic(shape, bounds):
     """
 
     def shift_gen(shift=[]):
+        """ Generates all combinations of shift of the current window """
         i = len(shift)
         if i == len(bounds):
             yield shift
