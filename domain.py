@@ -252,6 +252,7 @@ class Domain:
         x = (torch.linspace(a, b, n) for (a, b), n in zip(self.bounds, self.N))
         self.X = torch.meshgrid(*x)
         self.spatial_shape = self.X[0].shape
+        self.dX = torch.Tensor([(b - a) / n for (a, b), n in zip(self.bounds, self.N)])
 
         # Frequency coordinates
         k = [fftfreq(n, (b - a) / n) for (a, b), n in zip(self.bounds[:-1], self.N[:-1])] \
