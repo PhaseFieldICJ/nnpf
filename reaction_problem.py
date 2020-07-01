@@ -92,17 +92,15 @@ class ReactionProblem(pl.LightningModule):
             pl.seed_everything(self.hparams.seed)
             # Should also enable deterministic behavior in the trainer parameters
 
+    def loss(self, output, target):
+        """ Default loss function """
+        return torch.nn.functional.mse_loss(output, target)
 
     def training_step(self, batch, batch_idx):
         """ Default training step with custom loss function """
         data, target = batch
         output = self.forward(data)
-
-        try:
-            loss = self.loss_fn(output, target)
-        except AttributeError:
-            loss = torch.nn.functional.mse_loss(output, target)
-
+        loss = self.loss(output, target)
         return dispatch_metrics({'loss': loss})
 
     def configure_optimizers(self):
@@ -128,11 +126,11 @@ class ReactionProblem(pl.LightningModule):
 
     def train_dataloader(self):
         """ Returns the training data loader """
-        return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size or self.hparams.Ntrain)
+        return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size or len(self.train_dataset))
 
     def val_dataloader(self):
         """ Returns the validation data loader """
-        return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size or self.hparams.Nval)
+        return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size or len(self.val_dataset))
 
     def validation_step(self, batch, batch_idx):
         """ Called at each batch of the validation data """
