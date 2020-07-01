@@ -6,3 +6,5 @@
 - CHECK Convolution classes & add `flat_meshgrid`
 - base Trainer with deterministic switch and logger version
 - disable seed when loading checkpoint of seeded model.
+- launch script from hyper parameters YAML file
+- tools to visualize dataset
