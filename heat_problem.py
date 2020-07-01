@@ -11,6 +11,7 @@ import argparse
 
 from domain import complex_mul, Domain
 import shapes
+from nn_toolbox import dispatch_metrics
 
 def heat_kernel_freq(domain, dt):
     """ Return the discretizes heat kernel in frequency domain.
@@ -40,7 +41,7 @@ def heat_kernel_spatial(domain, dt, truncate=None):
         The discretized domain
     dt: float
         Time step
-    truncate: int or tuple of int
+    truncate: int or (int, int)
         Truncate kernel to have the given size.
 
     Returns
@@ -62,7 +63,8 @@ def heat_kernel_spatial(domain, dt, truncate=None):
     return kernel_spatial
 
 
-def generate_sphere_phase(num_samples, domain, min_radius, max_radius, min_epsilon, max_epsilon):
+# TODO: move that in a dedicated file (maybe a part in shapes). It can be reuse for other problems.
+def generate_sphere_phase(num_samples, domain, radius, epsilon):
     """
     Generates phase field function for one sphere per sample
 
@@ -74,16 +76,26 @@ def generate_sphere_phase(num_samples, domain, min_radius, max_radius, min_epsil
         Number of samples
     domain: domain.Domain
         Discretization domain
-    min_radius, max_radius: double
-        Bounds on the radius
-    min_epsilon, max_epsilon: double
-        Bounds on the sharpness of the interface
+    radius: float or (float, float)
+        Radius or bounds on the radius
+    epsilon: float or (float, float)
+        Value or bounds on the sharpness of the interface
 
     Returns
     -------
     data: Tensor
         Phase field function of a sphere foreach sample
     """
+
+    if isinstance(radius, float):
+        min_radius = max_radius = radius
+    else:
+        min_radius, max_radius = radius
+
+    if isinstance(epsilon, float):
+        min_epsilon = max_epsilon = epsilon
+    else:
+        min_epsilon, max_epsilon = epsilon
 
     sup_dims = (1,) + domain.dim * (1,) # Additionnal dimensions for appropriate broadcasting
     origin = torch.Tensor([a for a, b in domain.bounds]).resize_((domain.dim, 1) + sup_dims)
@@ -95,7 +107,8 @@ def generate_sphere_phase(num_samples, domain, min_radius, max_radius, min_epsil
     return 0.5 * (1 - torch.tanh(shape(*domain.X) / (2 * epsilon)))
 
 
-def generate_phase_field_union(num_samples, phase_field_gen, min_shapes, max_shapes):
+# TODO: move that in a dedicated file (maybe a part in shapes). It can be reuse for other problems.
+def generate_phase_field_union(num_samples, phase_field_gen, num_shapes):
     """
     Union of random number of phase fields
 
@@ -105,7 +118,7 @@ def generate_phase_field_union(num_samples, phase_field_gen, min_shapes, max_sha
         Number of samples
     phase_field_gen: function
         Given a number of samples, returns one phase field per sample
-    min_shapes, max_shapes: int
+    num_shapes: int or (int, int)
         Bounds on the number of superimposed phase fields
 
     Returns
@@ -113,6 +126,12 @@ def generate_phase_field_union(num_samples, phase_field_gen, min_shapes, max_sha
     data: Tensor
         Phase field function foreach sample
     """
+
+
+    if isinstance(num_shapes, int):
+        min_shapes = max_shapes = num_shapes
+    else:
+        min_shapes, max_shapes = num_shapes
 
     assert min_shapes >= 1
 
@@ -128,6 +147,7 @@ def generate_phase_field_union(num_samples, phase_field_gen, min_shapes, max_sha
     return data
 
 
+# TODO: move that in a dedicated file (maybe a part in shapes). It can be reuse for other problems.
 def evolve_phase_field(operator, phase_fields, steps):
     """
     Modify phase field samples under the given operator
@@ -146,7 +166,7 @@ def evolve_phase_field(operator, phase_fields, steps):
     data: Tensor
         initial phase fiels and concatenated evolutions.
     """
-    num_samples = phase_fields.shapes[0]
+    num_samples = phase_fields.shape[0]
     data = phase_fields.new_empty(num_samples * (steps + 1), *phase_fields.shape[1:])
     data[:num_samples] = phase_fields
     for i in range(steps):
@@ -191,7 +211,10 @@ class HeatProblem(pl.LightningModule):
     Features the train and validation data.
     """
 
-    def __init__(self, bounds, N, dt, Ntrain=100, Nval=None, batch_size=None, lr=1e-3, seed=None, **kwargs):
+    def __init__(self, bounds, N, dt, batch_size=None, lr=1e-3, seed=None,
+                 train_N=100, train_radius=[0, 0.25], train_epsilon=[0, 0.1], train_num_shapes=1, train_steps=10,
+                 val_N=100, val_radius=[0, 0.35], val_epsilon=[0, 0.2], val_num_shapes=[1, 3], val_steps=10,
+                 **kwargs):
         """ Constructor
 
         Parameters
@@ -218,11 +241,10 @@ class HeatProblem(pl.LightningModule):
 
         super().__init__()
 
-        # Default values
-        Nval = Nval or 10 * Ntrain
-
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('bounds', 'N', 'dt', 'Ntrain', 'Nval', 'batch_size', 'lr', 'seed')
+        self.save_hyperparameters('bounds', 'N', 'dt', 'batch_size', 'lr', 'seed',
+                                  'train_N', 'train_radius', 'train_epsilon', 'train_num_shapes', 'train_steps',
+                                  'val_N', 'val_radius', 'val_epsilon', 'val_num_shapes', 'val_steps',)
 
         # Seed random generators
         if self.hparams.seed is not None:
@@ -232,45 +254,39 @@ class HeatProblem(pl.LightningModule):
         # Domain
         self.domain = Domain(self.hparams.bounds, self.hparams.N)
 
-    def forward(self, x):
-        return x
+    def loss(self, output, target):
+        """ Default loss function """
+        return self.domain.dX.prod() * (target - output).square().sum(dim=list(range(2, 2 + self.domain.dim))).mean()
 
     def training_step(self, batch, batch_idx):
         """ Default training step with custom loss function """
         data, target = batch
         output = self.forward(data)
-
-        try:
-            loss = self.loss_fn(output, target)
-        except AttributeError:
-            loss = torch.nn.functional.mse_loss(output, target)
-
+        loss = self.loss(output, target)
         return dispatch_metrics({'loss': loss})
 
     def configure_optimizers(self):
         """ Default optimizer """
         return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
 
+    # TODO: data generated by a dedicated script, stored in an archive
     def prepare_data(self):
         """ Prepare training and validation data """
 
         exact_sol = HeatSolution(self.domain, self.hparams.dt)
 
-        def generate_data(num_samples, min_radius, max_radius, min_epsilon, max_epsilon, min_shapes, max_shapes, steps):
-            base_shape_gen = lambda num_samples: generate_sphere_phase(num_samples, self.domain, min_radius, max_radius, min_epsilon, max_epsilon)
-            data = generate_phase_field_union(num_samples, base_shape_gen, min_shapes, max_shapes)
+        def generate_data(num_samples, radius, epsilon, num_shapes, steps):
+            base_shape_gen = lambda num_samples: generate_sphere_phase(num_samples, self.domain, radius, epsilon)
+            data = generate_phase_field_union(num_samples, base_shape_gen, num_shapes)
             data = evolve_phase_field(exact_sol, data, steps + 1)
             return data[:(steps + 1) * num_samples], data[num_samples:(steps + 2) * num_samples]
 
         # Training dataset
         train_x, train_y = generate_data(
             self.hparams.train_N,
-            self.hparams.train_min_radius,
-            self.hparams.train_max_radius,
-            self.hparams.train_min_epsilon,
-            self.hparams.train_max_epsilon,
-            self.hparams.train_min_shapes,
-            self.hparams.train_max_shapes,
+            self.hparams.train_radius,
+            self.hparams.train_epsilon,
+            self.hparams.train_num_shapes,
             self.hparams.train_steps,
         )
         self.train_dataset = TensorDataset(train_x, train_y)
@@ -278,13 +294,62 @@ class HeatProblem(pl.LightningModule):
         # Validation dataset
         val_x, val_y = generate_data(
             self.hparams.val_N,
-            self.hparams.val_min_radius,
-            self.hparams.val_max_radius,
-            self.hparams.val_min_epsilon,
-            self.hparams.val_max_epsilon,
-            self.hparams.val_min_shapes,
-            self.hparams.val_max_shapes,
+            self.hparams.val_radius,
+            self.hparams.val_epsilon,
+            self.hparams.val_num_shapes,
             self.hparams.val_steps,
         )
         self.val_dataset = TensorDataset(val_x, val_y)
 
+    def train_dataloader(self):
+        """ Returns the training data loader """
+        return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size or len(self.train_dataset))
+
+    def val_dataloader(self):
+        """ Returns the validation data loader """
+        return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size or len(self.val_dataset))
+
+    def validation_step(self, batch, batch_idx):
+        """ Called at each batch of the validation data """
+        data, target = batch
+        output = self(data)
+        return {'val_loss': torch.nn.functional.mse_loss(output, target)}
+
+    def validation_epoch_end(self, outputs):
+        """ Called at epoch end of the validation step (after all batches) """
+        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
+        val_loss = {'val_loss': avg_loss}
+        return dispatch_metrics({'val_loss': avg_loss})
+
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        import re
+
+        # Parser for the domain bounds
+        def bounds_parser(s):
+            bounds = []
+            per_dim = s.split('x')
+            for dim_spec in per_dim:
+                match = re.fullmatch(r'\s*\[([^\]]*)\]\s*', dim_spec)
+                if not match:
+                    raise ValueError(f"Invalid bound specification {dim_spec}")
+                bounds.append([float(b) for b in match.group(1).split(',')])
+            return bounds
+
+        parser = argparse.ArgumentParser(
+            parents=[parent_parser],
+            add_help=False,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+        group = parser.add_argument_group("Heat equation problem", "Options common to all models of the heat equation.")
+        group.add_argument('--bounds', type=bounds_parser, default=[[0., 1.],[0., 1.]], help="Domain bounds in format like '[0, 1]x[1, 2.5]'")
+        group.add_argument('--N', type=int, nargs='+', default=256, help="Domain discretization")
+        group.add_argument('--dt', type=float, default=(2 / 256)**2, help="Time step")
+        group.add_argument('--train_N', type=int, default=100, help="Number of initial conditions in the training dataset")
+        group.add_argument('--val_N', type=int, default=100, help="Number of initial conditions in the validation dataset")
+        group.add_argument('--train_steps', type=int, default=10, help="Number of evolution steps in the training dataset")
+        group.add_argument('--val_steps', type=int, default=10, help="Number of evolution steps in the validation dataset")
+        group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
+        group.add_argument('--lr', type=float, default=1e-3, help="Learning rate")
+        group.add_argument('--seed', type=int, default=None, help="Seed the random generators and disable non-deterministic behavior")
+        return parser
