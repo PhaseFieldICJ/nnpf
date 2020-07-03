@@ -5,13 +5,12 @@ Base module and utils for the Heat equation problem
 
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-import pytorch_lightning as pl
 import math
 import argparse
 
 from domain import complex_mul, Domain
+from problem import Problem
 import shapes
-from nn_toolbox import dispatch_metrics
 
 def heat_kernel_freq(domain, dt):
     """ Return the discretizes heat kernel in frequency domain.
@@ -166,11 +165,11 @@ def evolve_phase_field(operator, phase_fields, steps):
     data: Tensor
         initial phase fiels and concatenated evolutions.
     """
-    num_samples = phase_fields.shape[0]
-    data = phase_fields.new_empty(num_samples * (steps + 1), *phase_fields.shape[1:])
-    data[:num_samples] = phase_fields
+    assert steps >= 1
+    data = phase_fields.new_empty(steps + 1, *phase_fields.shape)
+    data[0, ...] = phase_fields
     for i in range(steps):
-        data[((i + 1) * num_samples):((i + 2) * num_samples)] = operator(data[(i * num_samples):((i + 1) * num_samples)])
+        data[i + 1, ...] = operator(data[i, ...])
 
     return data
 
@@ -204,14 +203,14 @@ class HeatSolution:
         return self.domain.ifft(complex_mul(self.kernel, self.domain.fft(u)))
 
 
-class HeatProblem(pl.LightningModule):
+class HeatProblem(Problem):
     """
     Base class for the heat equation learning proble
 
     Features the train and validation data.
     """
 
-    def __init__(self, bounds, N, dt, batch_size=None, lr=1e-3, seed=None,
+    def __init__(self, bounds, N, dt, batch_size=None, lr=1e-3,
                  train_N=100, train_radius=[0, 0.25], train_epsilon=[0, 0.1], train_num_shapes=1, train_steps=10,
                  val_N=100, val_radius=[0, 0.35], val_epsilon=[0, 0.2], val_num_shapes=[1, 3], val_steps=10,
                  **kwargs):
@@ -235,21 +234,14 @@ class HeatProblem(pl.LightningModule):
             Size of the batch during training and validation steps. Full data if None.
         lr: float
             Learning rate of the optimizer
-        seed: int
-            If set to an integer, use it as seed of all random generators.
         """
 
-        super().__init__()
+        super().__init__(**kwargs)
 
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('bounds', 'N', 'dt', 'batch_size', 'lr', 'seed',
+        self.save_hyperparameters('bounds', 'N', 'dt', 'batch_size', 'lr',
                                   'train_N', 'train_radius', 'train_epsilon', 'train_num_shapes', 'train_steps',
                                   'val_N', 'val_radius', 'val_epsilon', 'val_num_shapes', 'val_steps',)
-
-        # Seed random generators
-        if self.hparams.seed is not None:
-            pl.seed_everything(self.hparams.seed)
-            # Should also enable deterministic behavior in the trainer parameters
 
         # Domain
         self.domain = Domain(self.hparams.bounds, self.hparams.N)
@@ -260,9 +252,12 @@ class HeatProblem(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         """ Default training step with custom loss function """
-        data, target = batch
-        output = self.forward(data)
-        loss = self.loss(output, target)
+        data, *targets = batch
+        loss = data.new_zeros([])
+        for target in targets:
+            data = self.forward(data)
+            loss += self.hparams.dt * self.loss(data, target)
+
         return dispatch_metrics({'loss': loss})
 
     def configure_optimizers(self):
@@ -279,27 +274,27 @@ class HeatProblem(pl.LightningModule):
             base_shape_gen = lambda num_samples: generate_sphere_phase(num_samples, self.domain, radius, epsilon)
             data = generate_phase_field_union(num_samples, base_shape_gen, num_shapes)
             data = evolve_phase_field(exact_sol, data, steps + 1)
-            return data[:(steps + 1) * num_samples], data[num_samples:(steps + 2) * num_samples]
+            return tuple(data[i, ...] for i in range(data.shape[0]))
 
         # Training dataset
-        train_x, train_y = generate_data(
+        train_x, *train_y = generate_data(
             self.hparams.train_N,
             self.hparams.train_radius,
             self.hparams.train_epsilon,
             self.hparams.train_num_shapes,
             self.hparams.train_steps,
         )
-        self.train_dataset = TensorDataset(train_x, train_y)
+        self.train_dataset = TensorDataset(train_x, *train_y)
 
         # Validation dataset
-        val_x, val_y = generate_data(
+        val_x, *val_y = generate_data(
             self.hparams.val_N,
             self.hparams.val_radius,
             self.hparams.val_epsilon,
             self.hparams.val_num_shapes,
             self.hparams.val_steps,
         )
-        self.val_dataset = TensorDataset(val_x, val_y)
+        self.val_dataset = TensorDataset(val_x, *val_y)
 
     def train_dataloader(self):
         """ Returns the training data loader """
@@ -311,9 +306,13 @@ class HeatProblem(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         """ Called at each batch of the validation data """
-        data, target = batch
-        output = self(data)
-        return {'val_loss': torch.nn.functional.mse_loss(output, target)}
+        data, *targets = batch
+        loss = data.new_zeros([])
+        for target in targets:
+            data = self(data)
+            loss += self.hparams.dt * self.loss(data, target)
+
+        return {'val_loss': loss}
 
     def validation_epoch_end(self, outputs):
         """ Called at epoch end of the validation step (after all batches) """
@@ -336,11 +335,7 @@ class HeatProblem(pl.LightningModule):
                 bounds.append([float(b) for b in match.group(1).split(',')])
             return bounds
 
-        parser = argparse.ArgumentParser(
-            parents=[parent_parser],
-            add_help=False,
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
+        parser = Problem.add_model_specific_args(parent_parser)
         group = parser.add_argument_group("Heat equation problem", "Options common to all models of the heat equation.")
         group.add_argument('--bounds', type=bounds_parser, default=[[0., 1.],[0., 1.]], help="Domain bounds in format like '[0, 1]x[1, 2.5]'")
         group.add_argument('--N', type=int, nargs='+', default=256, help="Domain discretization")
@@ -351,5 +346,5 @@ class HeatProblem(pl.LightningModule):
         group.add_argument('--val_steps', type=int, default=10, help="Number of evolution steps in the validation dataset")
         group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
         group.add_argument('--lr', type=float, default=1e-3, help="Learning rate")
-        group.add_argument('--seed', type=int, default=None, help="Seed the random generators and disable non-deterministic behavior")
         return parser
+
