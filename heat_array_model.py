@@ -3,20 +3,18 @@
 import torch
 import torch.nn as nn
 
-import pytorch_lightning as pl
-from pytorch_lightning import Trainer
-from pytorch_lightning.loggers import TensorBoardLogger
-
 import nn_models
 import nn_toolbox
 from domain import Domain
+import heat_problem
 from heat_problem import HeatProblem
+from trainer import Trainer
 
 import argparse
 
 class HeatArray(HeatProblem):
 
-    def __init__(self, kernel_size, padding_mode='circular', bias=False, **kwargs):
+    def __init__(self, kernel_size, padding_mode='circular', bias=False, init='zeros', **kwargs):
         """ Constructor
 
         Parameters
@@ -26,13 +24,18 @@ class HeatArray(HeatProblem):
         padding_mode: string
             'zeros', 'reflect', 'replicate' or 'circular'
         bias: bool
-             If True, adds a learnable bias to the output.
+            If True, adds a learnable bias to the output.
+        init: ['zeros', 'random', 'solution']
+            Initialization of the convolution kernel:
+            - 'random' for the default from PyTorch.
+            - 'zeros' for zero-initialization.
+            - 'solution' to initialize with the truncated heat kernel.
         """
 
         super().__init__(**kwargs)
 
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('kernel_size', 'padding_mode', 'bias')
+        self.save_hyperparameters('kernel_size', 'padding_mode', 'bias', 'init')
 
         # Model
         self.model = nn_models.ConvolutionArray(
@@ -42,8 +45,20 @@ class HeatArray(HeatProblem):
             bias=self.hparams.bias,
         )
 
+        # Kernel initialization (ugly)
+        if not self.is_loaded:
+            if self.hparams.init != 'random':
+                with torch.no_grad():
+                    self.model.weight[:] *= 0
+                    if self.hparams.init == 'solution':
+                        self.model.weight[:] += heat_problem.heat_kernel_spatial(self.domain, self.hparams.dt, self.hparams.kernel_size)
+
+    # TODO: auto reshape when no batch nor channel are included
     def forward(self, x):
         return self.model(x)
+
+    def loss(self, output, target):
+        return super().loss(output, target) + 0 * 1e-2 * self.model.weight.square().mean()
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -52,6 +67,7 @@ class HeatArray(HeatProblem):
         group.add_argument('--kernel_size', type=int, nargs='+', required=True, help='Size of the kernel (nD)')
         group.add_argument('--padding_mode', choices=['zeros', 'reflect', 'replicate', 'circular'], default='circular', help="Padding mode for the convolution")
         group.add_argument('--bias', action='store_true', help="Add a bias to the convolution")
+        group.add_argument('--init', choices=['zeros', 'random', 'solution'], default='zeros', help="Initialization of the convolution kernel")
         return parser
 
 
@@ -63,21 +79,15 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = Trainer.add_argparse_args(parser)
     parser = HeatArray.add_model_specific_args(parser)
-    parser.add_argument('--version', default=None, help="Experiment version (logger)")
     args = parser.parse_args()
-
-    # Deterministic calculation
-    try:
-        deterministic = args.seed is not None
-    except AttributeError:
-        deterministic = False
 
     # Model, training & fit
     model = HeatArray(**vars(args))
-    logger = TensorBoardLogger("logs", name="HeatArray", version=args.version)
-    trainer = Trainer.from_argparse_args(args, logger=logger, early_stop_callback=True, deterministic=deterministic)
+    trainer = Trainer.from_argparse_args(args, "HeatArray")
     trainer.fit(model)
 
+
+    print(model.model.weight.detach().sum() - 1.)
 
     import matplotlib.pyplot as plt
     plt.imshow(model.model.weight.detach()[0, 0, ...])
