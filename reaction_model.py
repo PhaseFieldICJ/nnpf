@@ -3,12 +3,11 @@
 import torch
 import torch.nn as nn
 
-from pytorch_lightning import Trainer
-from pytorch_lightning.loggers import TensorBoardLogger
 
 import nn_models
 import nn_toolbox
 from reaction_problem import ReactionProblem
+from trainer import Trainer
 
 import argparse
 
@@ -57,18 +56,10 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = Trainer.add_argparse_args(parser)
     parser = Reaction.add_model_specific_args(parser)
-    parser.add_argument('--version', default=None, help="Experiment version (logger)")
     args = parser.parse_args()
-
-    # Deterministic calculation
-    try:
-        deterministic = args.seed is not None
-    except AttributeError:
-        deterministic = False
 
     # Model, training & fit
     model = Reaction(**vars(args))
-    logger = TensorBoardLogger("logs", name="Reaction", version=args.version)
-    trainer = Trainer.from_argparse_args(args, logger=logger, early_stop_callback=True, deterministic=deterministic)
+    trainer = Trainer.from_argparse_args(args, "Reaction")
     trainer.fit(model)
 

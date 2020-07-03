@@ -3,7 +3,6 @@
 - add loaded checkpoints in hyper-parameters.
 - adding hyper-parameters of loaded models in main model hyper-parameters?
 - CHECK Convolution classes & add `flat_meshgrid`
-- base Trainer with deterministic switch and logger version
 - launch script from hyper parameters YAML file
 - tools to visualize dataset
 - model class name and path in hyper-parameters?
