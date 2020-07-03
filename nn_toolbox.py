@@ -183,21 +183,3 @@ def get_derivatives(model, t, order=1):
     return output
 
 
-def dispatch_metrics(metrics):
-    """ Dispatch metrics (e.g. loss) to log and progress bar """
-
-    def transform_key(key):
-        if key == 'loss':
-            return 'train_loss'
-        else:
-            return key
-
-    def format_value(value):
-        return f"{value:.2e}" # Fixed width value to avoid shaking progress bar
-
-    return {
-        **metrics,
-        'log': {transform_key(key): value for key, value in metrics.items()},
-        'progress_bar': {transform_key(key): format_value(value) for key, value in metrics.items()},
-    }
-

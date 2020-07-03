@@ -5,11 +5,9 @@ Base module and utils for the Allen-Cahn reaction term learning problem.
 
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-import pytorch_lightning as pl
-import math
 import argparse
 
-from nn_toolbox import dispatch_metrics
+from problem import Problem
 
 class ReactionSolution:
     """
@@ -48,14 +46,14 @@ class ReactionSolution:
         return result
 
 
-class ReactionProblem(pl.LightningModule):
+class ReactionProblem(Problem):
     """
     Base class for the Allen-Cahn reaction term learning problem
 
     Features the train and validation data.
     """
 
-    def __init__(self, epsilon=2/2**8, dt=None, margin=0.1, Ntrain=100, Nval=None, batch_size=None, lr=1e-3, seed=None, **kwargs):
+    def __init__(self, epsilon=2/2**8, dt=None, margin=0.1, Ntrain=100, Nval=None, batch_size=None, lr=1e-3, **kwargs):
         """ Constructor
 
         Parameters
@@ -78,19 +76,14 @@ class ReactionProblem(pl.LightningModule):
             If set to an integer, use it as seed of all random generators.
         """
 
-        super().__init__()
+        super().__init__(**kwargs)
 
         # Default values
         dt = dt or epsilon**2
         Nval = Nval or 10 * Ntrain
 
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('dt', 'epsilon', 'margin', 'Ntrain', 'Nval', 'batch_size', 'lr', 'seed')
-
-        # Seed random generators
-        if self.hparams.seed is not None:
-            pl.seed_everything(self.hparams.seed)
-            # Should also enable deterministic behavior in the trainer parameters
+        self.save_hyperparameters('dt', 'epsilon', 'margin', 'Ntrain', 'Nval', 'batch_size', 'lr')
 
     def loss(self, output, target):
         """ Default loss function """
@@ -101,7 +94,7 @@ class ReactionProblem(pl.LightningModule):
         data, target = batch
         output = self.forward(data)
         loss = self.loss(output, target)
-        return dispatch_metrics({'loss': loss})
+        return self.dispatch_metrics({'loss': loss})
 
     def configure_optimizers(self):
         """ Default optimizer """
@@ -142,15 +135,11 @@ class ReactionProblem(pl.LightningModule):
         """ Called at epoch end of the validation step (after all batches) """
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
         val_loss = {'val_loss': avg_loss}
-        return dispatch_metrics({'val_loss': avg_loss})
+        return self.dispatch_metrics({'val_loss': avg_loss})
 
     @staticmethod
     def add_model_specific_args(parent_parser):
-        parser = argparse.ArgumentParser(
-            parents=[parent_parser],
-            add_help=False,
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
+        parser = Problem.add_model_specific_args(parent_parser)
         group = parser.add_argument_group("Reaction problem", "Options common to all models of the reaction term.")
         group.add_argument('--epsilon', type=float, default=2/8**3, help="Interface sharpness")
         group.add_argument('--dt', type=float, default=None, help="Time step (epsilon**2 if None)")
@@ -159,6 +148,5 @@ class ReactionProblem(pl.LightningModule):
         group.add_argument('--Nval', type=int, default=None, help="Size of the validation dataset (10*Ntrain if None)")
         group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
         group.add_argument('--lr', type=float, default=1e-3, help="Learning rate")
-        group.add_argument('--seed', type=int, default=None, help="Seed the random generators and disable non-deterministic behavior")
         return parser
 
