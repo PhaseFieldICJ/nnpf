@@ -66,3 +66,36 @@ class Trainer(pl.Trainer):
             default_root_dir=default_root_dir,
             deterministic=deterministic)
 
+    def run_pretrain_routine(self, model):
+        """Sanity check a few things before starting actual training.
+
+        Overriding base class to add metric in logger, see
+        https://github.com/PyTorchLightning/pytorch-lightning/issues/1778#issuecomment-653733246
+
+        Args:
+            model: The model to run sanity test on.
+        """
+        self.logger_backup = self.logger
+        self.logger = None # Disabling logger to control hyperparameters
+        super().run_pretrain_routine(model)
+
+    def train(self):
+        """
+        Overriding base class to add metric in logger, see
+        https://github.com/PyTorchLightning/pytorch-lightning/issues/1778#issuecomment-653733246
+        """
+
+        self.logger = self.logger_backup
+
+        # log hyper-parameters
+        if self.logger is not None:
+            # save exp to get started
+            self.logger.log_hyperparams(
+                params=self.model.hparams,
+                metrics={'val_loss': self.checkpoint_callback.best_model_score}
+            )
+            self.logger.save()
+
+        super().train()
+
+

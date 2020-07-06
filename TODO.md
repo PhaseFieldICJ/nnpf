@@ -1,4 +1,3 @@
-- add metric to TensorBoard (to compare hyper parameters sets)
 - add resulting images to log ?
 - add loaded checkpoints in hyper-parameters.
 - adding hyper-parameters of loaded models in main model hyper-parameters?
