@@ -63,5 +63,4 @@ if __name__ == "__main__":
     trainer = Trainer.from_argparse_args(args, "Reaction")
     trainer.fit(model)
 
-    print(trainer.checkpoint_callback.best_model_score.item())
 
