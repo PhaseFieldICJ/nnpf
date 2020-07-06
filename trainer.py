@@ -2,6 +2,7 @@
 
 import pytorch_lightning as pl
 from pytorch_lightning.logging import TensorBoardLogger
+from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 
 class Trainer(pl.Trainer):
     """
@@ -37,6 +38,8 @@ class Trainer(pl.Trainer):
             These must be valid Trainer arguments.
         """
 
+        default_root_dir = args.default_root_dir if args.default_root_dir else "logs"
+
         # Deterministic calculation
         try:
             deterministic = args.deterministic or (args.seed is not None)
@@ -44,6 +47,22 @@ class Trainer(pl.Trainer):
             deterministic = args.deterministic
 
         # Logger
-        logger = TensorBoardLogger("logs", name=name, version=args.version)
-        return super().from_argparse_args(args, logger=logger, deterministic=deterministic)
+        logger = TensorBoardLogger(default_root_dir, name=name, version=args.version)
+
+        # Checkpointer
+        checkpointer = ModelCheckpoint(
+            filepath=None,
+            monitor="val_loss",
+            save_top_k=1,
+            mode='min',
+            period=1,
+        )
+
+        # Create trainer
+        return super().from_argparse_args(
+            args,
+            logger=logger,
+            checkpoint_callback=checkpointer,
+            default_root_dir=default_root_dir,
+            deterministic=deterministic)
 
