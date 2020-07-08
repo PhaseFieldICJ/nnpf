@@ -11,6 +11,7 @@ import argparse
 from domain import complex_mul, Domain
 from problem import Problem
 import shapes
+import nn_toolbox
 
 def heat_kernel_freq(domain, dt):
     """ Return the discretizes heat kernel in frequency domain.
@@ -210,7 +211,7 @@ class HeatProblem(Problem):
     Features the train and validation data.
     """
 
-    def __init__(self, bounds, N, dt, batch_size=None, lr=1e-3,
+    def __init__(self, bounds, N, dt, batch_size=None, lr=1e-3, loss_norms=[[2, 1.]],
                  train_N=100, train_radius=[0, 0.25], train_epsilon=[0, 0.1], train_num_shapes=1, train_steps=10,
                  val_N=100, val_radius=[0, 0.35], val_epsilon=[0, 0.2], val_num_shapes=[1, 3], val_steps=10,
                  **kwargs):
@@ -234,21 +235,30 @@ class HeatProblem(Problem):
             Size of the batch during training and validation steps. Full data if None.
         lr: float
             Learning rate of the optimizer
+        loss_norms: list of pair (p, weight)
+            Compose loss as sum of weight * (output - target).norm(p).
         """
 
         super().__init__(**kwargs)
 
+        loss_norms = loss_norms or [[2, 1.]]
+
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('bounds', 'N', 'dt', 'batch_size', 'lr',
+        self.save_hyperparameters('bounds', 'N', 'dt', 'batch_size', 'lr', 'loss_norms',
                                   'train_N', 'train_radius', 'train_epsilon', 'train_num_shapes', 'train_steps',
                                   'val_N', 'val_radius', 'val_epsilon', 'val_num_shapes', 'val_steps',)
 
         # Domain
         self.domain = Domain(self.hparams.bounds, self.hparams.N)
 
+        print(self.hparams.loss_norms)
+
     def loss(self, output, target):
         """ Default loss function """
-        return self.domain.dX.prod() * (target - output).square().sum(dim=list(range(2, 2 + self.domain.dim))).mean()
+        dim = tuple(range(2, 2 + self.domain.dim))
+        error = target - output
+        # Square of the weighted sum to regularize the loss
+        return self.domain.dX.prod() * sum(w * nn_toolbox.norm(error, p, dim) for p, w in self.hparams.loss_norms).square().mean()
 
     def training_step(self, batch, batch_idx):
         """ Default training step with custom loss function """
@@ -310,6 +320,7 @@ class HeatProblem(Problem):
         loss = data.new_zeros([])
         for target in targets:
             data = self(data)
+            #loss += self.hparams.dt * self.domain.dX.prod() * (target - data).square().sum(dim=list(range(2, 2 + self.domain.dim))).mean()
             loss += self.hparams.dt * self.loss(data, target)
 
         return {'val_loss': loss}
@@ -335,6 +346,13 @@ class HeatProblem(Problem):
                 bounds.append([float(b) for b in match.group(1).split(',')])
             return bounds
 
+        # Parser for loss definition
+        def float_or_str(v):
+            try:
+                return float(v)
+            except ValueError:
+                return v
+
         parser = Problem.add_model_specific_args(parent_parser)
         group = parser.add_argument_group("Heat equation problem", "Options common to all models of the heat equation.")
         group.add_argument('--bounds', type=bounds_parser, default=[[0., 1.],[0., 1.]], help="Domain bounds in format like '[0, 1]x[1, 2.5]'")
@@ -346,5 +364,7 @@ class HeatProblem(Problem):
         group.add_argument('--val_steps', type=int, default=10, help="Number of evolution steps in the validation dataset")
         group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
         group.add_argument('--lr', type=float, default=1e-3, help="Learning rate")
+        group.add_argument('--loss_norms', type=float_or_str, nargs=2, action='append', help="List of (p, weight). Compose loss as sum of weight * (output - target).norm(p). Default to l2 norm.")
+
         return parser
 
