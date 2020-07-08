@@ -34,6 +34,14 @@ class HeatArray(HeatProblem):
 
         super().__init__(**kwargs)
 
+        # Fix kernel size to match domain dimension
+        if isinstance(kernel_size, int):
+            kernel_size = [kernel_size]
+        else:
+            kernel_size = tuple(kernel_size)
+        if len(kernel_size) == 1:
+            kernel_size = kernel_size * self.domain.dim
+
         # Hyper-parameters (used for saving/loading the module)
         self.save_hyperparameters('kernel_size', 'padding_mode', 'bias', 'init')
 
@@ -45,7 +53,7 @@ class HeatArray(HeatProblem):
             bias=self.hparams.bias,
         )
 
-        # Kernel initialization (ugly)
+        # Kernel initialization (FIXME: ugly)
         if not self.is_loaded:
             if self.hparams.init != 'random':
                 with torch.no_grad():
