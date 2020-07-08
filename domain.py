@@ -246,7 +246,9 @@ class Domain:
         if type(N) == int:
             self.N = [N] * self.dim
         else:
-            self.N = list(N)
+            self.N = tuple(N)
+        if len(self.N) == 1:
+            self.N = self.N * self.dim
 
         # Spatial coordinates
         x = (torch.linspace(a, b, n) for (a, b), n in zip(self.bounds, self.N))
