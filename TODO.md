@@ -5,3 +5,5 @@
 - launch script from hyper parameters YAML file
 - tools to visualize dataset
 - model class name and path in hyper-parameters?
+- decorator for `forward` method that detect numpy input, disable grad & reshape ?
+- diff, `total_variation_norm`, norm in another module?
