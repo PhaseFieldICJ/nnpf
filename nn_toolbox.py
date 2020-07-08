@@ -183,3 +183,102 @@ def get_derivatives(model, t, order=1):
     return output
 
 
+def diff(data, n=1, axis=-1):
+    """
+    Calculate the n-th discrete difference along the given axis.
+
+    Parameters
+    ----------
+    data: Tensor
+        Input tensor
+    n: int
+        The number of times values are differenced.
+    axis: int
+        The axis along which the difference is taken.
+
+    Examples
+    --------
+    >>> a = torch.Tensor([1., 2., 3.5, 4.6, 5.1])
+    >>> diff(a)
+    tensor([1.0000, 1.5000, 1.1000, 0.5000])
+    >>> diff(a, n=2)
+    tensor([ 0.5000, -0.4000, -0.6000])
+
+    >>> a = torch.arange(8).reshape(2, 4)
+    >>> diff(a, axis=1)
+    tensor([[1, 1, 1],
+            [1, 1, 1]])
+    """
+
+    # Creating slices
+    dim = data.dim()
+    left_slice = [slice(None)] * dim
+    left_slice[axis] = slice(None, -1)
+    left_slice = tuple(left_slice)
+    right_slice = [slice(None)] * dim
+    right_slice[axis] = slice(1, None)
+    right_slice = tuple(right_slice)
+
+    # Differences
+    for i in range(n):
+        data = data[right_slice] - data[left_slice]
+
+    return data
+
+
+def total_variation_norm(data, dim=None):
+    """
+    Total variation "norm"
+
+    Parameters
+    ----------
+    data: Tensor
+        The input tensor
+    dim: int, tuple, list
+        Dimensions along which to calculate the norm.
+        See torch.norm (you want to specify it appropriately!)
+
+    Exemples
+    --------
+    >>> a = torch.arange(8).reshape(2, 4)
+    >>> total_variation_norm(a, dim=1)
+    tensors([3, 3])
+    """
+    # Shape of the result
+    if dim is None:
+        dim = list(range(0, data.dim()))
+    elif isinstance(dim, int):
+        dim = [dim]
+    out_dim = [data.shape[i] for i in range(data.dim()) if i not in dim]
+
+    # Differences along dims
+    out = data.new_zeros(out_dim)
+    for i in dim:
+        out += diff(data, axis=i).abs().sum(dim=dim)
+
+    return out
+
+
+def norm(data, p=2, dim=None):
+    """
+    Returns the matrix norm or vector norm of a given tensor
+
+    Same as torch.norm with additional total variation "norm"
+
+    Parameters
+    ----------
+    data: Tensor
+        The input tensor
+    p: int, float, inf, -inf, 'fro', 'nuc', 'tv'
+        The order of the norm. 'tv' for total variation "norm".
+        See torch.norm for other choices.
+    dim: int, tuple, list
+        Dimensions along which to calculate the norm.
+        See torch.norm (you want to specify it appropriately!)
+    """
+
+    if p == 'tv':
+        return total_variation_norm(data, dim)
+    else:
+        return torch.norm(data, p, dim)
+
