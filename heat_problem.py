@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Base module and utils for the Heat equation problem
 
@@ -267,8 +268,6 @@ class HeatProblem(Problem):
         # Domain
         self.domain = Domain(self.hparams.bounds, self.hparams.N)
 
-        print(self.hparams.loss_norms)
-
     def loss(self, output, target):
         """ Default loss function """
         dim = tuple(range(2, 2 + self.domain.dim))
@@ -383,4 +382,87 @@ class HeatProblem(Problem):
         group.add_argument('--loss_norms', type=float_or_str, nargs=2, action='append', help="List of (p, weight). Compose loss as sum of weight * (output - target).norm(p). Default to l2 norm.")
 
         return parser
+
+
+if __name__ == "__main__":
+
+    import problem
+    import heat_problem
+
+    # Command-line arguments
+    parser = argparse.ArgumentParser(
+            description="Evaluation of a model for the heat equation problem",
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('checkpoint', type=str, help="Path to the model's checkpoint")
+    parser.add_argument('--spheres', type=int, nargs='+', default=[1], help="Number (or interval) of spheres")
+    parser.add_argument('--radius', type=float, nargs='+', default=[0.2], help="Radius (or interval) of the spheres")
+    parser.add_argument('--epsilon', type=float, nargs='+', default=[0.01], help="Interface sharpness (or interval) of the phase field")
+    parser.add_argument('--steps', type=int, default=1, help="Number of evolution steps")
+    args = parser.parse_args()
+
+    # Expanding scalar to bounds
+    args.spheres += args.spheres * (2 - len(args.spheres))
+    args.radius += args.radius * (2 - len(args.radius))
+    args.epsilon += args.epsilon * (2 - len(args.epsilon))
+
+    # Loading model
+    checkpoint_path = problem.checkpoint_from_path(args.checkpoint)
+    extra_data = torch.load(checkpoint_path)
+    model = heat_problem.HeatProblem.load_from_checkpoint(args.checkpoint)
+    model.freeze()
+
+    # Some informations about the model
+    print(f"""
+Model summary:
+    checkpoint path: {checkpoint_path}
+    epochs: {extra_data['epoch']}
+    steps: {extra_data['global_step']}
+    best score: {extra_data['checkpoint_callback_best_model_score']}
+    ndof: {nn_toolbox.ndof(model)}
+""")
+
+    print("Model hyper parameters:")
+    for key, value in model.hparams.items():
+        print(f"    {key}: {value}")
+
+    # Exact solution
+    exact_sol = heat_problem.HeatSolution(model.domain, model.hparams.dt)
+
+    # Generate initial data
+    exact_data = generate_phase_field_union(
+            1,
+            lambda num_samples: generate_sphere_phase(num_samples,
+                                                      model.domain,
+                                                      args.radius,
+                                                      args.epsilon),
+            args.spheres)
+    model_data = exact_data.clone()
+
+    # Display
+    import matplotlib.pyplot as plt
+    for i in range(args.steps + 1):
+        # Exact solution
+        plt.subplot(args.steps + 1, 3, 3 * i + 1)
+        plt.imshow(exact_data[0, 0, ...])
+        if i == 0:
+            plt.title('Solution')
+
+        # Model solution
+        plt.subplot(args.steps + 1, 3, 3 * i + 2)
+        plt.imshow(model_data[0, 0, ...])
+        if i == 0:
+            plt.title('Model')
+
+        # Difference
+        plt.subplot(args.steps + 1, 3, 3 * i + 3)
+        plt.imshow((exact_data - model_data)[0, 0, ...])
+        plt.colorbar()
+        if i == 0:
+            plt.title('Difference')
+
+        # Evolution
+        exact_data = exact_sol(exact_data)
+        model_data = model(model_data)
+
+    plt.show()
 
