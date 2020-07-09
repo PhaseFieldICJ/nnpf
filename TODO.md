@@ -7,3 +7,4 @@
 - model class name and path in hyper-parameters?
 - decorator for `forward` method that detect numpy input, disable grad & reshape ?
 - diff, `total_variation_norm`, norm in another module?
+- consistant way of specifying domain bounds, kernel size, ... in the command-line (e.g. [0,1]x[0,1], 15x15, maybe event [0,1]³ or [0,1]^3 ?!)

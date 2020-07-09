@@ -63,7 +63,7 @@ def heat_kernel_spatial(domain, dt, truncate=None):
     return kernel_spatial
 
 
-# TODO: move that in a dedicated file (maybe a part in shapes). It can be reuse for other problems.
+# TODO: move that in a dedicated file (maybe a part in shapes). It can be reused for other problems.
 def generate_sphere_phase(num_samples, domain, radius, epsilon):
     """
     Generates phase field function for one sphere per sample
@@ -97,17 +97,33 @@ def generate_sphere_phase(num_samples, domain, radius, epsilon):
     else:
         min_epsilon, max_epsilon = epsilon
 
-    sup_dims = (1,) + domain.dim * (1,) # Additionnal dimensions for appropriate broadcasting
+    # Additionnal dimensions for appropriate broadcasting
+    sup_dims = (1,) + domain.dim * (1,)
+
+    # Domain origin
     origin = torch.Tensor([a for a, b in domain.bounds]).resize_((domain.dim, 1) + sup_dims)
+
+    # Domain width
     width = torch.Tensor([b - a for a, b in domain.bounds]).resize_((domain.dim, 1) + sup_dims)
+
+    # Sphere centers
+    # Resulting shape is (dimension, samples, 1, N, M, ...) because
+    # shapes.sphere iterate through first dimension of center when calculating
+    # distance.
     centers = origin + width * torch.rand((domain.dim, num_samples) + sup_dims)
+
+    # Sphere radius
     radius = min_radius + (max_radius - min_radius) * torch.rand((num_samples,) + sup_dims)
+
+    # Periodic sphere
     shape = shapes.periodic(shapes.sphere(centers, radius), domain.bounds)
+
+    # Interface sharpness and corresponding phase field profil
     epsilon = min_epsilon + (max_epsilon - min_epsilon) * torch.rand((num_samples,) + sup_dims)
     return 0.5 * (1 - torch.tanh(shape(*domain.X) / (2 * epsilon)))
 
 
-# TODO: move that in a dedicated file (maybe a part in shapes). It can be reuse for other problems.
+# TODO: move that in a dedicated file (maybe a part in shapes). It can be reused for other problems.
 def generate_phase_field_union(num_samples, phase_field_gen, num_shapes):
     """
     Union of random number of phase fields
@@ -147,7 +163,7 @@ def generate_phase_field_union(num_samples, phase_field_gen, num_shapes):
     return data
 
 
-# TODO: move that in a dedicated file (maybe a part in shapes). It can be reuse for other problems.
+# TODO: move that in a dedicated file (maybe a part in shapes). It can be reused for other problems.
 def evolve_phase_field(operator, phase_fields, steps):
     """
     Modify phase field samples under the given operator
