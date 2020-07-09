@@ -5,6 +5,26 @@ Base module and utils for every problem
 import pytorch_lightning as pl
 import argparse
 
+def checkpoint_from_path(checkpoint_path):
+    """
+    Returns path if it points to an actual file,
+    otherwise search for the last checkpoint of the form
+    "path/checkpoints/epoch=*.ckpt"
+    """
+    import os
+
+    # If path if a folder, found last checkpoint from checkpoints subfolder
+    if os.path.isdir(checkpoint_path):
+        import glob
+        import re
+        glob_expr = os.path.join(os.path.expanduser(checkpoint_path), r"checkpoints", r"epoch=*.ckpt")
+        checkpoint_list = glob.glob(glob_expr)
+        if len(checkpoint_list) > 0:
+            checkpoint_path = sorted(checkpoint_list, key=lambda s: int(re.search(r"epoch=([0-9]+)\.ckpt$", s).group(1)))[-1]
+
+    return checkpoint_path
+
+
 class Problem(pl.LightningModule):
     """
     Base class for every problem
@@ -67,17 +87,10 @@ class Problem(pl.LightningModule):
     @classmethod
     def load_from_checkpoint(cls, checkpoint_path, *args, **kwargs):
         """ Load model from checkpoint with automatic model forward """
-        import os
         import inspect
 
         # If path if a folder, found last checkpoint from checkpoints subfolder
-        if os.path.isdir(checkpoint_path):
-            import glob
-            import re
-            glob_expr = os.path.join(os.path.expanduser(checkpoint_path), r"checkpoints", r"epoch=*.ckpt")
-            checkpoint_list = glob.glob(glob_expr)
-            if len(checkpoint_list) > 0:
-                checkpoint_path = sorted(checkpoint_list, key=lambda s: int(re.search(r"epoch=([0-9]+)\.ckpt$", s).group(1)))[-1]
+        checkpoint_path = checkpoint_from_path(checkpoint_path)
 
         # Forward to the right class if current class is abstract
         if inspect.isabstract(cls):
