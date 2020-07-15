@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
     # Model, training & fit
     model = HeatArray(**vars(args))
-    trainer = Trainer.from_argparse_args(args, "HeatArray", metric='metric_l2')
+    trainer = Trainer.from_argparse_args(args, "HeatArray")
     trainer.fit(model)
 
 

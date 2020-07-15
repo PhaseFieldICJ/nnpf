@@ -305,7 +305,7 @@ class HeatProblem(Problem):
         """ Called at epoch end of the validation step (after all batches) """
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
         avg_l2_metric = torch.stack([x['metric_l2'] for x in outputs]).mean()
-        return self.dispatch_metrics({'val_loss': avg_loss, 'metric_l2': avg_l2_metric})
+        return self.dispatch_metrics({'val_loss': avg_loss, 'metric': avg_l2_metric})
 
     def configure_optimizers(self):
         """ Default optimizer """

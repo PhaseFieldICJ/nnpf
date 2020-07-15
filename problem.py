@@ -66,6 +66,10 @@ class Problem(pl.LightningModule):
         def format_value(value):
             return f"{value:.2e}" # Fixed width value to avoid shaking progress bar
 
+        # Global metric (default to validation loss)
+        if 'val_loss' in metrics and 'metric' not in metrics:
+            metrics['metric'] = metrics['val_loss']
+
         return {
             **metrics,
             'log': {transform_key(key): value for key, value in metrics.items()},

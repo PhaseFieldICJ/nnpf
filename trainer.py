@@ -52,7 +52,7 @@ class Trainer(pl.Trainer):
         # Checkpointer
         checkpointer = ModelCheckpoint(
             filepath=None,
-            monitor=kwargs.get('metric', 'val_loss'),
+            monitor='metric',
             save_top_k=1,
             mode='min',
             period=1,
