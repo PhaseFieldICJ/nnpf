@@ -259,6 +259,23 @@ def total_variation_norm(data, dim=None):
     return out
 
 
+# TODO: merge with total variation...
+def laplacian_norm(data, dim=None):
+    # Shape of the result
+    if dim is None:
+        dim = list(range(0, data.dim()))
+    elif isinstance(dim, int):
+        dim = [dim]
+    out_dim = [data.shape[i] for i in range(data.dim()) if i not in dim]
+
+    # Differences along dims
+    out = data.new_zeros(out_dim)
+    for i in dim:
+        out += diff(data, n=2, axis=i).abs().sum(dim=dim)
+
+    return out
+
+
 def norm(data, p=2, dim=None):
     """
     Returns the matrix norm or vector norm of a given tensor
@@ -279,6 +296,8 @@ def norm(data, p=2, dim=None):
 
     if p == 'tv':
         return total_variation_norm(data, dim)
+    elif p == 'laplacian':
+        return laplacian_norm(data, dim)
     else:
         return torch.norm(data, p, dim)
 

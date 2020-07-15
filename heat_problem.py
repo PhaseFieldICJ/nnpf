@@ -228,7 +228,7 @@ class HeatProblem(Problem):
     Features the train and validation data.
     """
 
-    def __init__(self, bounds, N, dt, batch_size=None, lr=1e-3, loss_norms=[[2, 1.]],
+    def __init__(self, bounds, N, dt, batch_size=None, lr=1e-3, loss_norms=[[2, 1.]], loss_power=2.,
                  train_N=100, train_radius=[0, 0.25], train_epsilon=[0, 0.1], train_num_shapes=1, train_steps=10,
                  val_N=100, val_radius=[0, 0.35], val_epsilon=[0, 0.2], val_num_shapes=[1, 3], val_steps=10,
                  **kwargs):
@@ -253,7 +253,10 @@ class HeatProblem(Problem):
         lr: float
             Learning rate of the optimizer
         loss_norms: list of pair (p, weight)
-            Compose loss as sum of weight * (output - target).norm(p).
+            Compose loss as sum of weight * (output - target).norm(p).pow(e).
+            Exponent e is defined with loss_power parameter.
+        loss_power: float
+            Power applied to each loss term (for regularization purpose).
         """
 
         super().__init__(**kwargs)
@@ -261,7 +264,7 @@ class HeatProblem(Problem):
         loss_norms = loss_norms or [[2, 1.]]
 
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('bounds', 'N', 'dt', 'batch_size', 'lr', 'loss_norms',
+        self.save_hyperparameters('bounds', 'N', 'dt', 'batch_size', 'lr', 'loss_norms', 'loss_power'
                                   'train_N', 'train_radius', 'train_epsilon', 'train_num_shapes', 'train_steps',
                                   'val_N', 'val_radius', 'val_epsilon', 'val_num_shapes', 'val_steps',)
 
@@ -272,8 +275,9 @@ class HeatProblem(Problem):
         """ Default loss function """
         dim = tuple(range(2, 2 + self.domain.dim))
         error = target - output
-        # Square of the weighted sum to regularize the loss
-        return self.domain.dX.prod() * sum(w * nn_toolbox.norm(error, p, dim) for p, w in self.hparams.loss_norms).square().mean()
+        return self.domain.dX.prod() * sum(
+            w * nn_toolbox.norm(error, p, dim).pow(self.hparams.loss_power)
+            for p, w in self.hparams.loss_norms).mean()
 
     def training_step(self, batch, batch_idx):
         """ Default training step with custom loss function """
@@ -284,6 +288,23 @@ class HeatProblem(Problem):
             loss += self.hparams.dt * self.loss(data, target)
 
         return self.dispatch_metrics({'loss': loss})
+
+    def validation_step(self, batch, batch_idx):
+        """ Called at each batch of the validation data """
+        data, *targets = batch
+        loss = data.new_zeros([])
+        for target in targets:
+            data = self(data)
+            #loss += self.hparams.dt * self.domain.dX.prod() * (target - data).square().sum(dim=list(range(2, 2 + self.domain.dim))).mean()
+            loss += self.hparams.dt * self.loss(data, target)
+
+        return {'val_loss': loss}
+
+    def validation_epoch_end(self, outputs):
+        """ Called at epoch end of the validation step (after all batches) """
+        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
+        val_loss = {'val_loss': avg_loss}
+        return self.dispatch_metrics({'val_loss': avg_loss})
 
     def configure_optimizers(self):
         """ Default optimizer """
@@ -329,23 +350,6 @@ class HeatProblem(Problem):
         """ Returns the validation data loader """
         return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size or len(self.val_dataset))
 
-    def validation_step(self, batch, batch_idx):
-        """ Called at each batch of the validation data """
-        data, *targets = batch
-        loss = data.new_zeros([])
-        for target in targets:
-            data = self(data)
-            #loss += self.hparams.dt * self.domain.dX.prod() * (target - data).square().sum(dim=list(range(2, 2 + self.domain.dim))).mean()
-            loss += self.hparams.dt * self.loss(data, target)
-
-        return {'val_loss': loss}
-
-    def validation_epoch_end(self, outputs):
-        """ Called at epoch end of the validation step (after all batches) """
-        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-        val_loss = {'val_loss': avg_loss}
-        return self.dispatch_metrics({'val_loss': avg_loss})
-
     @staticmethod
     def add_model_specific_args(parent_parser):
         import re
@@ -379,10 +383,15 @@ class HeatProblem(Problem):
         group.add_argument('--val_steps', type=int, default=10, help="Number of evolution steps in the validation dataset")
         group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
         group.add_argument('--lr', type=float, default=1e-3, help="Learning rate")
-        group.add_argument('--loss_norms', type=float_or_str, nargs=2, action='append', help="List of (p, weight). Compose loss as sum of weight * (output - target).norm(p). Default to l2 norm.")
+        group.add_argument('--loss_norms', type=float_or_str, nargs=2, action='append', help="List of (p, weight). Compose loss as sum of weight * (output - target).norm(p).pow(e). Default to l2 norm. Exponent e is defined with loss_power parameter.")
+        group.add_argument('--loss_power', type=float, default=2., help="Power applied to each loss term (for regularization purpose)")
 
         return parser
 
+
+###############################################################################
+# Command-line interface
+###############################################################################
 
 if __name__ == "__main__":
 
