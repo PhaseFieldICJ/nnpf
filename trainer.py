@@ -52,7 +52,7 @@ class Trainer(pl.Trainer):
         # Checkpointer
         checkpointer = ModelCheckpoint(
             filepath=None,
-            monitor="val_loss",
+            monitor=kwargs.get('metric', 'val_loss'),
             save_top_k=1,
             mode='min',
             period=1,
@@ -92,7 +92,7 @@ class Trainer(pl.Trainer):
             # save exp to get started
             self.logger.log_hyperparams(
                 params=self.model.hparams,
-                metrics={'val_loss': self.checkpoint_callback.best_model_score}
+                metrics={self.checkpoint_callback.monitor: self.checkpoint_callback.best_model_score}
             )
             self.logger.save()
 

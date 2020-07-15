@@ -92,7 +92,7 @@ class HeatArray(HeatProblem):
         group.add_argument('--bias', action='store_true', help="Add a bias to the convolution")
         group.add_argument('--init', choices=['zeros', 'random', 'solution'], default='zeros', help="Initialization of the convolution kernel")
         group.add_argument('--kernel_norms', type=float_or_str, default=[], nargs=2, action='append', help="List of (p, weight). Compose the kernel penalization term as sum of weight * kernel.norm(p).pow(e). Exponent e is defined with --kernel_power option.")
-        group.add_argument('--kernel_power', type=float, default=2, help="Power applied to each penalization term (for regularization purpose)")
+        group.add_argument('--kernel_power', type=float, default=2., help="Power applied to each penalization term (for regularization purpose)")
         return parser
 
 
@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
     # Model, training & fit
     model = HeatArray(**vars(args))
-    trainer = Trainer.from_argparse_args(args, "HeatArray")
+    trainer = Trainer.from_argparse_args(args, "HeatArray", metric='metric_l2')
     trainer.fit(model)
 
 

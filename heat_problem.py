@@ -264,7 +264,7 @@ class HeatProblem(Problem):
         loss_norms = loss_norms or [[2, 1.]]
 
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('bounds', 'N', 'dt', 'batch_size', 'lr', 'loss_norms', 'loss_power'
+        self.save_hyperparameters('bounds', 'N', 'dt', 'batch_size', 'lr', 'loss_norms', 'loss_power',
                                   'train_N', 'train_radius', 'train_epsilon', 'train_num_shapes', 'train_steps',
                                   'val_N', 'val_radius', 'val_epsilon', 'val_num_shapes', 'val_steps',)
 
@@ -293,18 +293,19 @@ class HeatProblem(Problem):
         """ Called at each batch of the validation data """
         data, *targets = batch
         loss = data.new_zeros([])
+        metric_l2 = data.new_zeros([])
         for target in targets:
             data = self(data)
-            #loss += self.hparams.dt * self.domain.dX.prod() * (target - data).square().sum(dim=list(range(2, 2 + self.domain.dim))).mean()
+            metric_l2 += self.hparams.dt * self.domain.dX.prod() * (target - data).square().sum(dim=list(range(2, 2 + self.domain.dim))).mean()
             loss += self.hparams.dt * self.loss(data, target)
 
-        return {'val_loss': loss}
+        return {'val_loss': loss, 'metric_l2': metric_l2}
 
     def validation_epoch_end(self, outputs):
         """ Called at epoch end of the validation step (after all batches) """
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-        val_loss = {'val_loss': avg_loss}
-        return self.dispatch_metrics({'val_loss': avg_loss})
+        avg_l2_metric = torch.stack([x['metric_l2'] for x in outputs]).mean()
+        return self.dispatch_metrics({'val_loss': avg_loss, 'metric_l2': avg_l2_metric})
 
     def configure_optimizers(self):
         """ Default optimizer """
