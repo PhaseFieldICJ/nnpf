@@ -228,7 +228,7 @@ class HeatProblem(Problem):
     Features the train and validation data.
     """
 
-    def __init__(self, bounds, N, dt, batch_size=None, lr=1e-3, loss_norms=[[2, 1.]], loss_power=2.,
+    def __init__(self, bounds, N, dt, batch_size=None, batch_shuffle=False, lr=1e-3, loss_norms=[[2, 1.]], loss_power=2.,
                  train_N=100, train_radius=[0, 0.25], train_epsilon=[0, 0.1], train_num_shapes=1, train_steps=10,
                  val_N=100, val_radius=[0, 0.35], val_epsilon=[0, 0.2], val_num_shapes=[1, 3], val_steps=10,
                  **kwargs):
@@ -250,6 +250,8 @@ class HeatProblem(Problem):
             Number of samples for the validation step. 10*Ntrain if None.
         batch_size: int
             Size of the batch during training and validation steps. Full data if None.
+        batch_shuffle: bool
+            Shuffle batch content.
         lr: float
             Learning rate of the optimizer
         loss_norms: list of pair (p, weight)
@@ -264,7 +266,7 @@ class HeatProblem(Problem):
         loss_norms = loss_norms or [[2, 1.]]
 
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('bounds', 'N', 'dt', 'batch_size', 'lr', 'loss_norms', 'loss_power',
+        self.save_hyperparameters('bounds', 'N', 'dt', 'batch_size', 'batch_shuffle', 'lr', 'loss_norms', 'loss_power',
                                   'train_N', 'train_radius', 'train_epsilon', 'train_num_shapes', 'train_steps',
                                   'val_N', 'val_radius', 'val_epsilon', 'val_num_shapes', 'val_steps',)
 
@@ -296,7 +298,7 @@ class HeatProblem(Problem):
         metric_l2 = data.new_zeros([])
         for target in targets:
             data = self(data)
-            metric_l2 += self.hparams.dt * self.domain.dX.prod() * (target - data).square().sum(dim=list(range(2, 2 + self.domain.dim))).mean()
+            metric_l2 += self.hparams.dt * self.domain.dX.prod() * (target - data).square().sum(dim=list(range(2, 2 + self.domain.dim))).sqrt().mean()
             loss += self.hparams.dt * self.loss(data, target)
 
         return {'val_loss': loss, 'metric_l2': metric_l2}
@@ -345,7 +347,7 @@ class HeatProblem(Problem):
 
     def train_dataloader(self):
         """ Returns the training data loader """
-        return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size or len(self.train_dataset))
+        return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size or len(self.train_dataset), shuffle=self.hparams.batch_shuffle)
 
     def val_dataloader(self):
         """ Returns the validation data loader """
@@ -383,6 +385,7 @@ class HeatProblem(Problem):
         group.add_argument('--train_steps', type=int, default=10, help="Number of evolution steps in the training dataset")
         group.add_argument('--val_steps', type=int, default=10, help="Number of evolution steps in the validation dataset")
         group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
+        group.add_argument('--batch_shuffle', type=bool, default=False, help="Shuffle batch (1 to activate)")
         group.add_argument('--lr', type=float, default=1e-3, help="Learning rate")
         group.add_argument('--loss_norms', type=float_or_str, nargs=2, action='append', help="List of (p, weight). Compose loss as sum of weight * (output - target).norm(p).pow(e). Default to l2 norm. Exponent e is defined with loss_power parameter.")
         group.add_argument('--loss_power', type=float, default=2., help="Power applied to each loss term (for regularization purpose)")
