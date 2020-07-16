@@ -226,7 +226,7 @@ def diff(data, n=1, axis=-1):
     return data
 
 
-def total_variation_norm(data, dim=None):
+def total_variation_norm(data, power=1, dim=None):
     """
     Total variation "norm"
 
@@ -254,13 +254,13 @@ def total_variation_norm(data, dim=None):
     # Differences along dims
     out = data.new_zeros(out_dim)
     for i in dim:
-        out += diff(data, axis=i).abs().sum(dim=dim)
+        out += diff(data, axis=i).abs().pow(power).sum(dim=dim).pow(1/power)
 
     return out
 
 
 # TODO: merge with total variation...
-def laplacian_norm(data, dim=None):
+def laplacian_norm(data, power=1, dim=None):
     # Shape of the result
     if dim is None:
         dim = list(range(0, data.dim()))
@@ -271,7 +271,7 @@ def laplacian_norm(data, dim=None):
     # Differences along dims
     out = data.new_zeros(out_dim)
     for i in dim:
-        out += diff(data, n=2, axis=i).abs().sum(dim=dim)
+        out += diff(data, n=2, axis=i).abs().pow(power).sum(dim=dim).pow(1/power)
 
     return out
 
@@ -294,10 +294,10 @@ def norm(data, p=2, dim=None):
         See torch.norm (you want to specify it appropriately!)
     """
 
-    if p == 'tv':
-        return total_variation_norm(data, dim)
-    elif p == 'laplacian':
-        return laplacian_norm(data, dim)
+    if isinstance(p, str) and len(p) >= 2 and p[:2] == 'tv':
+        return total_variation_norm(data, power=float(p[2:]) if len(p) > 2 else 1, dim=dim)
+    elif isinstance(p, str) and len(p) >= 9 and p[:9] == 'laplacian':
+        return laplacian_norm(data, power=float(p[9:]) if len(p) > 9 else 1, dim=dim)
     else:
         return torch.norm(data, p, dim)
 
