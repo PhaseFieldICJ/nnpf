@@ -242,7 +242,7 @@ def total_variation_norm(data, dim=None):
     --------
     >>> a = torch.arange(8).reshape(2, 4)
     >>> total_variation_norm(a, dim=1)
-    tensors([3, 3])
+    tensor([3, 3])
     """
     # Shape of the result
     if dim is None:
