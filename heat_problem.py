@@ -453,29 +453,32 @@ Model summary:
 
     # Display
     import matplotlib.pyplot as plt
+    fig, axes = plt.subplots(nrows=args.steps + 1, ncols=3)
+
     for i in range(args.steps + 1):
         # Exact solution
-        plt.subplot(args.steps + 1, 3, 3 * i + 1)
-        plt.imshow(exact_data[0, 0, ...])
+        axes[i, 0].imshow(exact_data[0, 0, ...])
+        axes[i, 0].axis('off')
         if i == 0:
-            plt.title('Solution')
+            axes[i, 0].set_title('Solution')
 
         # Model solution
-        plt.subplot(args.steps + 1, 3, 3 * i + 2)
-        plt.imshow(model_data[0, 0, ...])
+        axes[i, 1].imshow(model_data[0, 0, ...])
+        axes[i, 1].axis('off')
         if i == 0:
-            plt.title('Model')
+            axes[i, 1].set_title('Model')
 
         # Difference
-        plt.subplot(args.steps + 1, 3, 3 * i + 3)
-        plt.imshow((exact_data - model_data)[0, 0, ...])
-        plt.colorbar()
+        im = axes[i, 2].imshow((exact_data - model_data)[0, 0, ...])
+        fig.colorbar(im, ax=axes[i, 2])
+        axes[i, 2].axis('off')
         if i == 0:
-            plt.title('Difference')
+            axes[i, 2].set_title('Difference')
 
         # Evolution
         exact_data = exact_sol(exact_data)
         model_data = model(model_data)
 
+    fig.tight_layout(pad=0, w_pad=-10, h_pad=0)
     plt.show()
 
