@@ -347,7 +347,6 @@ class HeatProblem(Problem):
 
     def train_dataloader(self):
         """ Returns the training data loader """
-        print(f"batch_shuffle = {self.hparams.batch_shuffle}")
         return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size or len(self.train_dataset), shuffle=self.hparams.batch_shuffle)
 
     def val_dataloader(self):
@@ -383,7 +382,7 @@ class HeatProblem(Problem):
         group.add_argument('--dt', type=float, default=(2 / 256)**2, help="Time step")
         group.add_argument('--train_N', type=int, default=100, help="Number of initial conditions in the training dataset")
         group.add_argument('--val_N', type=int, default=100, help="Number of initial conditions in the validation dataset")
-        group.add_argument('--train_steps', type=int, default=10, help="Number of evolution steps in the training dataset")
+        group.add_argument('--train_steps', type=int, default=1, help="Number of evolution steps in the training dataset")
         group.add_argument('--val_steps', type=int, default=10, help="Number of evolution steps in the validation dataset")
         group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
         group.add_argument('--batch_shuffle', type=lambda v: bool(int(v)), default=False, help="Shuffle batch (1 to activate)")
