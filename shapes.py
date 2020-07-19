@@ -147,13 +147,18 @@ def display(shape_or_dist, X=None, scale=1., extent=None):
         col *= 1.0 + 0.2 * torch.cos(128.0 / scale * adist)
         return mix(col, dist.new_ones(3), 1.0 - smoothstep(0., scale * 0.015, adist))
 
+    # Calculating distance
     if not torch.is_tensor(shape_or_dist):
         shape_or_dist = shape_or_dist(*X)
     shape_or_dist = shape_or_dist.squeeze()
+    assert shape_or_dist.dim() == 2, "Can only display 2D distance fields"
 
-    assert shape_or_dist.dim() == 2
+    # Extent
+    if X is not None and extent is None:
+        extent = [X[0].min(), X[0].max(), X[1].min(), X[1].max()]
+
 
     import matplotlib.pyplot as plt
-    plt.imshow(color(shape_or_dist).clamp(0., 1.))
+    plt.imshow(color(shape_or_dist).clamp(0., 1.), extent=extent)
     plt.show()
 
