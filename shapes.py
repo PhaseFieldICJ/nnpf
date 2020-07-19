@@ -108,3 +108,52 @@ def periodic(shape, bounds):
 
     return union(*(translation(shape, shift) for shift in shift_gen()))
 
+
+def display(shape_or_dist, X=None, scale=1., extent=None):
+    """ Display a 2D shape or distance function.
+
+    Parameters
+    ----------
+    shape_or_dist: shape or torch.tensor
+        Shape definition (X needed) or directly the signed distance field
+    X: tuple or None
+        If shape_or_dist is a shape, X are the point coordinates
+    scale: real
+        Scale of the visualization
+    extent: tuple/list or None
+        Domain extent. If None, calculated from X (if given)
+
+    Example
+    -------
+    >>> from domain import Domain
+    >>> d = Domain([[-1, 1], [-1, 1]], [256, 256])
+    >>> s = periodic(union(shapes.sphere([0, 0], 0.5), sphere([0.4, 0.3], 0.3)), d.bounds)
+    >>> display(s, d.X)
+    """
+
+    def smoothstep(a, b, x):
+        x = torch.clamp((x - a) / (b - a), 0., 1.)
+        return x.square() * (3 - 2. * x)
+
+    def mix(a, b, r):
+        return a + (b - a) * r
+
+    # Color from Inigo Quilez
+    # See e.g. https://www.shadertoy.com/view/3t33WH
+    def color(dist):
+        adist = dist[..., None].abs()
+        col = torch.where(dist[..., None] < 0., dist.new([0.6, 0.8, 1.0]), dist.new([0.9, 0.6, 0.3]))
+        col *= 1.0 - (-9.0 / scale * adist).exp()
+        col *= 1.0 + 0.2 * torch.cos(128.0 / scale * adist)
+        return mix(col, dist.new_ones(3), 1.0 - smoothstep(0., scale * 0.015, adist))
+
+    if not torch.is_tensor(shape_or_dist):
+        shape_or_dist = shape_or_dist(*X)
+    shape_or_dist = shape_or_dist.squeeze()
+
+    assert shape_or_dist.dim() == 2
+
+    import matplotlib.pyplot as plt
+    plt.imshow(color(shape_or_dist).clamp(0., 1.))
+    plt.show()
+
