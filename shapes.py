@@ -72,7 +72,7 @@ def reduce(op, *shapes):
     return dist
 
 def union(*shapes):
-    """ Union of shapes (not exact) """
+    """ Union of shapes (not exact in the interior) """
     return reduce(torch.min, *shapes)
 
 
