@@ -6,7 +6,7 @@ Example
 
 Centered sphere:
 >>> X, Y = torch.meshgrid(torch.linspace(0, 1, 5), torch.linspace(0, 1, 5))
->>> s = sphere([0.5, 0.5], 0.25)
+>>> s = sphere(0.25, [0.5, 0.5])
 >>> s(X, Y)
 tensor([[ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571],
         [ 0.3090,  0.1036,  0.0000,  0.1036,  0.3090],
@@ -15,7 +15,7 @@ tensor([[ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571],
         [ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571]])
 
 Shifted sphere with periodicity:
->>> sp = periodic(sphere([0.75, 0.25], 0.25), [(0, 1), (0, 1)])
+>>> sp = periodic(sphere(0.25, [0.75, 0.25]), [(0, 1), (0, 1)])
 >>> sp(X, Y)
 tensor([[ 0.1036,  0.0000,  0.1036,  0.3090,  0.1036],
         [ 0.3090,  0.2500,  0.3090,  0.4571,  0.3090],
@@ -24,9 +24,9 @@ tensor([[ 0.1036,  0.0000,  0.1036,  0.3090,  0.1036],
         [ 0.1036,  0.0000,  0.1036,  0.3090,  0.1036]])
 
 Distance calculation for multiple spheres at once:
->>> center = torch.rand(2, 10, 1, 1)
 >>> radius = torch.rand(10, 1, 1)
->>> sm = sphere(center, radius)
+>>> center = torch.rand(2, 10, 1, 1)
+>>> sm = sphere(radius, center)
 >>> sm(X, Y).shape
 torch.Size([10, 5, 5])
 
@@ -50,12 +50,19 @@ import torch
 ###############################################################################
 # Shapes
 
-def sphere(center, radius):
-    """ Signed distance to a sphere """
+def dot():
+    """ Signed distance to a dot """
     def dist(*X):
-        return torch.sqrt(sum((X[i] - center[i])**2 for i in range(len(X)))) - radius
+        return sum(x**2 for x in X).sqrt()
 
     return dist
+
+def sphere(radius, center=None):
+    """ Signed distance to a sphere """
+    if center is None:
+        return rounding(dot(), radius)
+    else:
+        return translation(sphere(radius), center)
 
 def box(sizes):
     """ Signed distance to a box """
@@ -96,10 +103,17 @@ def translation(shape, shift):
 
     return dist
 
-def scale(shape, s):
+def scaling(shape, s):
     """ Scale shape by given factor """
     def dist(*X):
         return shape(*(x / s for x in X)) * s
+
+    return dist
+
+def rounding(shape, radius):
+    """ Rounds a shape by given radius (shift distance outward) """
+    def dist(*X):
+        return shape(*X) - radius
 
     return dist
 
@@ -141,7 +155,7 @@ def display(shape_or_dist, X=None, scale=1., extent=None):
     -------
     >>> from domain import Domain
     >>> d = Domain([[-1, 1], [-1, 1]], [256, 256])
-    >>> s = periodic(union(shapes.sphere([0, 0], 0.5), sphere([0.4, 0.3], 0.3)), d.bounds)
+    >>> s = periodic(union(sphere(0.5, [0, 0]), sphere(0.3, [0.4, 0.3])), d.bounds)
     >>> display(s, d.X)
     """
 

@@ -118,7 +118,7 @@ def generate_sphere_phase(num_samples, domain, radius, epsilon):
     radius = min_radius + (max_radius - min_radius) * torch.rand((num_samples,) + sup_dims)
 
     # Periodic sphere
-    shape = shapes.periodic(shapes.sphere(centers, radius), domain.bounds)
+    shape = shapes.periodic(shapes.sphere(radius, centers), domain.bounds)
 
     # Interface sharpness and corresponding phase field profil
     epsilon = min_epsilon + (max_epsilon - min_epsilon) * torch.rand((num_samples,) + sup_dims)
