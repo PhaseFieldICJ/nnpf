@@ -13,6 +13,7 @@ from domain import complex_mul, Domain
 from problem import Problem
 import shapes
 import nn_toolbox
+from phase_field import profil
 
 def heat_kernel_freq(domain, dt):
     """ Return the discretizes heat kernel in frequency domain.
@@ -121,7 +122,7 @@ def generate_sphere_phase(num_samples, domain, radius, epsilon):
 
     # Interface sharpness and corresponding phase field profil
     epsilon = min_epsilon + (max_epsilon - min_epsilon) * torch.rand((num_samples,) + sup_dims)
-    return 0.5 * (1 - torch.tanh(shape(*domain.X) / (2 * epsilon)))
+    return profil(shape(*domain.X), epsilon)
 
 
 # TODO: move that in a dedicated file (maybe a part in shapes). It can be reused for other problems.

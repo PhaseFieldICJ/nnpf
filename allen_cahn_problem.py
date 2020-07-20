@@ -8,23 +8,6 @@ import pytorch_lightning as pl
 
 import shapes
 
-def profil(dist, epsilon):
-    """
-    Phase-field profil from the given distance field and interface sharpness
-
-    Parameters
-    ----------
-    dist: Tensor
-        Signed distance field to the interface
-    epsilon: float
-        Interface sharpness
-
-    Returns
-    -------
-    u_eps: Tensor
-        Corresponding phase-field solution.
-    """
-    return 0.5 * (1 - torch.tanh(dist / (2 * epsilon)))
 
 def sphere_dist_MC(X, radius=1., t=0., center=None):
     """
