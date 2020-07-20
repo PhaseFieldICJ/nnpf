@@ -57,6 +57,14 @@ def sphere(center, radius):
 
     return dist
 
+def box(sizes):
+    """ Signed distance to a box """
+    def dist(*X):
+        q = torch.stack([x.abs() - s for x, s in zip(X, sizes)])
+        z = q.new_zeros(1)
+        return torch.max(q, z).norm(dim=0) + torch.min(q.max(dim=0).values, z)
+
+    return dist
 
 ###############################################################################
 # Operations
@@ -88,6 +96,12 @@ def translation(shape, shift):
 
     return dist
 
+def scale(shape, s):
+    """ Scale shape by given factor """
+    def dist(*X):
+        return shape(*(x / s for x in X)) * s
+
+    return dist
 
 def periodic(shape, bounds):
     """ Periodicize a shape using given bounds
