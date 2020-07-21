@@ -137,7 +137,7 @@ def periodic(shape, bounds):
     return union(*(translation(shape, shift) for shift in shift_gen()))
 
 
-def display(shape_or_dist, X=None, scale=1., extent=None):
+def display(shape_or_dist, X=None, scale=1., extent=None, return_image=False):
     """ Display a 2D shape or distance function.
 
     Parameters
@@ -150,6 +150,8 @@ def display(shape_or_dist, X=None, scale=1., extent=None):
         Scale of the visualization
     extent: tuple/list or None
         Domain extent. If None, calculated from X (if given)
+    return_image: bool
+        If True, don't display the distance function and returns the image instead
 
     Example
     -------
@@ -181,12 +183,17 @@ def display(shape_or_dist, X=None, scale=1., extent=None):
     shape_or_dist = shape_or_dist.squeeze()
     assert shape_or_dist.dim() == 2, "Can only display 2D distance fields"
 
+    # Image
+    image = color(shape_or_dist).clamp(0., 1.)
+    if return_image:
+        return image
+
     # Extent
     if X is not None and extent is None:
         extent = [X[0].min(), X[0].max(), X[1].min(), X[1].max()]
 
-
+    # Display
     import matplotlib.pyplot as plt
-    plt.imshow(color(shape_or_dist).clamp(0., 1.), extent=extent)
+    plt.imshow(image, extent=extent)
     plt.show()
 
