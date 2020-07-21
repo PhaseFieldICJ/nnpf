@@ -205,7 +205,7 @@ class AllenCahnProblem(Problem):
         # Metric calculation
         radius = 0.45 * min(b[1] - b[0] for b in self.domain.bounds)
         model_volume, exact_volume = self.check_sphere_volume(radius, 1000)
-        volume_error = (model_volume - exact_volume).norm()
+        volume_error = self.hparams.dt * (model_volume - exact_volume).norm()
 
         return self.dispatch_metrics({'val_loss': avg_loss, 'metric': volume_error})
 
