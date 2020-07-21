@@ -72,8 +72,6 @@ class ReactionProblem(Problem):
             Size of the batch during training and validation steps. Full data if None.
         lr: float
             Learning rate of the optimizer
-        seed: int
-            If set to an integer, use it as seed of all random generators.
         """
 
         super().__init__(**kwargs)
