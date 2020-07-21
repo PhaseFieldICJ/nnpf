@@ -4,8 +4,10 @@ Base module and utils for the Allen-Cahn equation learning problem
 
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-import pytorch_lightning as pl
 
+from problem import Problem
+from domain import Domain
+from phase_field import profil
 import shapes
 
 
@@ -29,8 +31,265 @@ def sphere_dist_MC(X, radius=1., t=0., center=None):
     dist: Tensor
         The signed distance field
     """
-    center = center or [0.] * len(X)
-    radius = torch.as_tensor(radius**2 - 2 * t).sqrt()
-    return sum((X[i] - center[i]).square() for i in range(len(X))).sqrt() - radius
+    radius = torch.as_tensor(radius**2 - 2 * t).max(torch.tensor([0.])).sqrt()
+    return shapes.sphere(radius, center)(*X)
 
-    
+
+def check_sphere_volume(model, domain, radius, epsilon, dt, num_steps, center=None):
+    """
+    Check an Allen-Cahn model by measuring sphere volume decreasing
+
+    Parameters
+    ----------
+    model: callable
+        Returns `u^{n+1}` from `u^{n}. Don't forget to disable grad calculation before!
+    domain: domain.Domain
+        Discretization domain
+    radius: float
+        Sphere radius
+    epsilon: float
+        Interface sharpness in phase field model
+    dt: float
+        Time step
+    num_steps: int
+        Number of time steps
+    center: list of float
+        Sphere center (domain center if None)
+
+    Returns
+    -------
+    model_volume: torch.tensor
+        Sphere volume evolution for the given model
+    exact_volume: torch.tensor
+        Sphere volume evolution of the solution
+    """
+
+    center = center or [0.5 * sum(b) for b in domain.bounds]
+
+    def generate_solution(i):
+        return profil(sphere_dist_MC(domain.X, radius, i * dt, center), epsilon)
+
+    def vol(u):
+        return domain.dX.prod() * u.sum()
+
+    model_volume = domain.X[0].new_empty(num_steps + 1)
+    exact_volume = model_volume.new_empty(num_steps + 1)
+
+    u = generate_solution(0)
+
+    for i in range(num_steps + 1):
+        model_volume[i] = vol(u)
+        exact_volume[i] = vol(generate_solution(i))
+        u = model(u)
+
+    return model_volume, exact_volume
+
+
+class AllenCahnProblem(Problem):
+    """
+    Base class for the Allen-Cahn equation problem
+
+    Features the train and validation data, and the metric.
+    """
+
+    def __init__(self, bounds, N, epsilon, dt=None,
+                 batch_size=None, batch_shuffle=None, lr=1e-3,
+                 loss_norms=[[2, 1.]], loss_power=2.,
+                 radius=[0.05, 0.45], train_N=10, train_steps=1, val_N=20, val_steps=5,
+                 **kwargs):
+        """ Constructor
+
+        Parameters
+        ----------
+        bounds: iterable of pairs of float
+            Bounds of the domain
+        N: int or iterable of int
+            Number of discretization points
+        epsilon: float
+            Interface sharpness in phase field model
+        dt: float
+            Time step. epsilon**2 if None.
+        batch_size: int
+            Size of the batch during training and validation steps. Full data if None.
+        batch_shuffle: bool
+            Shuffle batch content.
+        lr: float
+            Learning rate of the optimizer
+        loss_norms: list of pair (p, weight)
+            Compose loss as sum of weight * (output - target).norm(p).pow(e).
+            Exponent e is defined with loss_power parameter.
+        loss_power: float
+            Power applied to each loss term (for regularization purpose).
+        radius: tuple or list of 2 floats
+            Bounds on sphere radius (ratio of domain bounds) used for training and validation dataset.
+        train_N, val_N: int
+            Size of the training and validation datasets
+        train_steps, val_steps: int
+            Number of evolution step applied to each input
+        kwargs: dict
+            Parameters passed to Problem (see doc)
+        """
+
+        super().__init__(**kwargs)
+
+        # Default values
+        dt = dt or epsilon**2
+
+        # Hyper-parameters (used for saving/loading the module)
+        self.save_hyperparameters(
+            'bounds', 'N', 'dt', 'epsilon',
+            'batch_size', 'batch_shuffle', 'lr', 'loss_norms', 'loss_power',
+            'radius', 'train_N', 'val_N', 'train_steps', 'val_steps',
+        )
+
+        # Domain
+        self.domain = Domain(self.hparams.bounds, self.hparams.N)
+
+    def loss(self, output, target):
+        """ Default loss function """
+        dim = tuple(range(2, 2 + self.domain.dim))
+        error = target - output
+        return self.domain.dX.prod() * sum(
+            w * nn_toolbox.norm(error, p, dim).pow(self.hparams.loss_power)
+            for p, w in self.hparams.loss_norms).mean()
+
+    def check_sphere_volume(self, radius, num_steps, center=None):
+        """
+        Check an Allen-Cahn model by measuring sphere volume decreasing
+
+        Parameters
+        ----------
+        radius: float
+            Sphere radius
+        num_steps: int
+            Number of time steps
+        center: list of float
+            Sphere center (domain center if None)
+
+        Returns
+        -------
+        model_volume: torch.tensor
+            Sphere volume evolution for the given model
+        exact_volume: torch.tensor
+            Sphere volume evolution of the solution
+        """
+        with torch.no_grad():
+            return check_sphere_volume(self, self.domain, radius, self.hparams.epsilon, self.hparams.dt, num_steps, center)
+
+    def training_step(self, batch, batch_idx):
+        """ Default training step with custom loss function """
+        data, *targets = batch
+        loss = data.new_zeros([])
+        for target in targets:
+            data = self.forward(data)
+            loss += self.hparams.dt * self.loss(data, target)
+
+        return self.dispatch_metrics({'loss': loss})
+
+    def validation_step(self, batch, batch_idx):
+        """ Called at each batch of the validation data """
+        data, *targets = batch
+        loss = data.new_zeros([])
+        for target in targets:
+            data = self(data)
+            loss += self.hparams.dt * self.loss(data, target)
+
+        return {'val_loss': loss}
+
+    def validation_epoch_end(self, outputs):
+        """ Called at epoch end of the validation step (after all batches) """
+        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
+
+        # Metric calculation
+        radius = 0.45 * min(b[1] - b[0] for b in self.domain.bounds)
+        model_volume, exact_volume = self.check_sphere_volume(radius, 1000)
+        volume_error = (model_volume - exact_volume).norm()
+
+        return self.dispatch_metrics({'val_loss': avg_loss, 'metric': volume_error})
+
+    def configure_optimizers(self):
+        """ Default optimizer """
+        return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+
+    def prepare_data(self):
+        """ Prepare training and validation data """
+
+        # Additionnal dimensions for appropriate broadcasting
+        sup_dims = (1,) + self.domain.dim * (1,)
+
+        # Shape properties
+        domain_diameter = min(b[1] - b[0] for b in self.domain.bounds)
+        radius = [domain_diameter * r for r in self.hparams.radius]
+        center = [0.5 * sum(b) for b in self.domain.bounds]
+
+        def generate_data(num_samples, steps):
+            return tuple(
+                profil(
+                    sphere_dist_MC(
+                        self.domain.X,
+                        radius=torch.linspace(radius[0], radius[1], num_samples).reshape(-1, *sup_dims),
+                        center=center,
+                        t=i*self.hparams.dt),
+                    self.hparams.epsilon)
+                for i in range(steps + 1))
+
+        # Training dataset
+        train_x, *train_y = generate_data(self.hparams.train_N, self.hparams.train_steps)
+        self.train_dataset = TensorDataset(train_x, *train_y)
+
+        # Validation dataset
+        val_x, *val_y = generate_data(self.hparams.val_N, self.hparams.val_steps)
+        self.val_dataset = TensorDataset(val_x, *val_y)
+
+    def train_dataloader(self):
+        """ Returns the training data loader """
+        return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size or len(self.train_dataset), shuffle=self.hparams.batch_shuffle)
+
+    def val_dataloader(self):
+        """ Returns the validation data loader """
+        return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size or len(self.val_dataset))
+
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        import re
+
+        # Parser for the domain bounds
+        def bounds_parser(s):
+            bounds = []
+            per_dim = s.split('x')
+            for dim_spec in per_dim:
+                match = re.fullmatch(r'\s*\[([^\]]*)\]\s*', dim_spec)
+                if not match:
+                    raise ValueError(f"Invalid bound specification {dim_spec}")
+                bounds.append([float(b) for b in match.group(1).split(',')])
+            return bounds
+
+        # Parser for loss definition
+        def float_or_str(v):
+            try:
+                return float(v)
+            except ValueError:
+                return v
+
+        parser = Problem.add_model_specific_args(parent_parser)
+        group = parser.add_argument_group("Allen-Cahn problem", "Options common to all models of Allen-Cahn equation.")
+        group.add_argument('--bounds', type=bounds_parser, default=[[0., 1.],[0., 1.]], help="Domain bounds in format like '[0, 1]x[1, 2.5]'")
+        group.add_argument('--N', type=int, nargs='+', default=256, help="Domain discretization")
+        group.add_argument('--epsilon', type=float, default=2/8**3, help="Interface sharpness")
+        group.add_argument('--dt', type=float, default=None, help="Time step (epsilon**2 if None)")
+        group.add_argument('--train_N', type=int, default=100, help="Number of initial conditions in the training dataset")
+        group.add_argument('--val_N', type=int, default=100, help="Number of initial conditions in the validation dataset")
+        group.add_argument('--train_steps', type=int, default=1, help="Number of evolution steps in the training dataset")
+        group.add_argument('--val_steps', type=int, default=10, help="Number of evolution steps in the validation dataset")
+        group.add_argument('--radius', type=float, nargs=2, default=[0.05, 0.45], help="Bounds on sphere radius (ratio of domain bounds) used for training and validation dataset.")
+        group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
+        group.add_argument('--batch_shuffle', type=lambda v: bool(int(v)), default=False, help="Shuffle batch (1 to activate)")
+        group.add_argument('--lr', type=float, default=1e-3, help="Learning rate")
+        group.add_argument('--loss_norms', type=float_or_str, nargs=2, action='append', help="List of (p, weight). Compose loss as sum of weight * (output - target).norm(p).pow(e). Default to l2 norm. Exponent e is defined with loss_power parameter.")
+        group.add_argument('--loss_power', type=float, default=2., help="Power applied to each loss term (for regularization purpose)")
+
+        return parser
+
+    def forward(self):
+        pass
+
