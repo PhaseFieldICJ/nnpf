@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from problem import Problem
 from domain import Domain
 from phase_field import profil
+import nn_toolbox
 import shapes
 
 
@@ -67,7 +68,7 @@ def check_sphere_volume(model, domain, radius, epsilon, dt, num_steps, center=No
     center = center or [0.5 * sum(b) for b in domain.bounds]
 
     def generate_solution(i):
-        return profil(sphere_dist_MC(domain.X, radius, i * dt, center), epsilon)
+        return profil(sphere_dist_MC(domain.X, radius, i * dt, center), epsilon)[None, None, ...]
 
     def vol(u):
         return domain.dX.prod() * u.sum()
@@ -134,6 +135,7 @@ class AllenCahnProblem(Problem):
 
         # Default values
         dt = dt or epsilon**2
+        loss_norms = loss_norms or [[2, 1.]]
 
         # Hyper-parameters (used for saving/loading the module)
         self.save_hyperparameters(

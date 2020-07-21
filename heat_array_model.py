@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import torch
-import torch.nn as nn
 
 import nn_models
 import nn_toolbox

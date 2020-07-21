@@ -13,3 +13,4 @@
 - dataset generation and loss calculation on multiple steps in a dedicated class (eg EvolutionProblem)?
 - 64 bits precision support (see https://github.com/PyTorchLightning/pytorch-lightning/issues/2497)
 - adding dtype in every possible class (eg Domain)
+- FIXME: loading a AllenCahnDR from a AllenCahnProblem!!!
