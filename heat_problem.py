@@ -224,7 +224,7 @@ class HeatSolution:
 
 class HeatProblem(Problem):
     """
-    Base class for the heat equation learning proble
+    Base class for the heat equation learning problem
 
     Features the train and validation data.
     """
@@ -245,9 +245,9 @@ class HeatProblem(Problem):
             Time step.
         margin: float
             Expanding length of the sampled [0, 1] interval
-        Ntrain: int
+        train_N: int
             Number of samples for the training step
-        Nval: int
+        val_N: int
             Number of samples for the validation step. 10*Ntrain if None.
         batch_size: int
             Size of the batch during training and validation steps. Full data if None.
