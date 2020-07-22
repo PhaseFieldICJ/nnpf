@@ -4,6 +4,7 @@ Base module and utils for the Allen-Cahn equation learning problem
 
 import torch
 from torch.utils.data import DataLoader, TensorDataset
+import math
 
 from problem import Problem
 from domain import Domain
@@ -155,16 +156,18 @@ class AllenCahnProblem(Problem):
             w * nn_toolbox.norm(error, p, dim).pow(self.hparams.loss_power)
             for p, w in self.hparams.loss_norms).mean()
 
-    def check_sphere_volume(self, radius, num_steps, center=None):
+    def check_sphere_volume(self, radius=0.45, num_steps=None, center=None):
         """
         Check an Allen-Cahn model by measuring sphere volume decreasing
+
+        Note: Remember to freeze the model if gradient calculation is not needed!!!
 
         Parameters
         ----------
         radius: float
-            Sphere radius
+            Sphere radius (ratio of domain diameter)
         num_steps: int
-            Number of time steps
+            Number of time steps. If None, calculate it to reach radius 0.01 * domain diameter
         center: list of float
             Sphere center (domain center if None)
 
@@ -175,6 +178,10 @@ class AllenCahnProblem(Problem):
         exact_volume: torch.tensor
             Sphere volume evolution of the solution
         """
+        domain_diameter = min(b[1] - b[0] for b in self.domain.bounds)
+        radius = radius * domain_diameter
+        num_steps = num_steps or math.floor(((0.01 * domain_diameter)**2 + radius**2) / (2 * self.hparams.dt))
+
         with torch.no_grad():
             return check_sphere_volume(self, self.domain, radius, self.hparams.epsilon, self.hparams.dt, num_steps, center)
 
@@ -203,8 +210,7 @@ class AllenCahnProblem(Problem):
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
 
         # Metric calculation
-        radius = 0.45 * min(b[1] - b[0] for b in self.domain.bounds)
-        model_volume, exact_volume = self.check_sphere_volume(radius, 1000)
+        model_volume, exact_volume = self.check_sphere_volume()
         volume_error = self.hparams.dt * (model_volume - exact_volume).norm()
 
         return self.dispatch_metrics({'val_loss': avg_loss, 'metric': volume_error})
@@ -292,6 +298,4 @@ class AllenCahnProblem(Problem):
 
         return parser
 
-    def forward(self):
-        pass
 
