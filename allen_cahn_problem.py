@@ -286,7 +286,7 @@ class AllenCahnProblem(Problem):
         group.add_argument('--epsilon', type=float, default=2/8**3, help="Interface sharpness")
         group.add_argument('--dt', type=float, default=None, help="Time step (epsilon**2 if None)")
         group.add_argument('--train_N', type=int, default=100, help="Number of initial conditions in the training dataset")
-        group.add_argument('--val_N', type=int, default=100, help="Number of initial conditions in the validation dataset")
+        group.add_argument('--val_N', type=int, default=200, help="Number of initial conditions in the validation dataset")
         group.add_argument('--train_steps', type=int, default=1, help="Number of evolution steps in the training dataset")
         group.add_argument('--val_steps', type=int, default=10, help="Number of evolution steps in the validation dataset")
         group.add_argument('--radius', type=float, nargs=2, default=[0.05, 0.45], help="Bounds on sphere radius (ratio of domain bounds) used for training and validation dataset.")
