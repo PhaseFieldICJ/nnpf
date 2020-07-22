@@ -1,5 +1,6 @@
 """ Lightning trainer with additional features """
 
+import os
 import pytorch_lightning as pl
 from pytorch_lightning.logging import TensorBoardLogger
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
@@ -96,6 +97,10 @@ class Trainer(pl.Trainer):
             )
             self.logger.save()
 
-        super().train()
+        # Saving initial state
+        path = os.path.join(self.logger.log_dir, "checkpoints")
+        os.makedirs(path, exist_ok=True)
+        self.save_checkpoint(os.path.join(path, f"epoch={self.current_epoch}.ckpt"))
 
+        super().train()
 
