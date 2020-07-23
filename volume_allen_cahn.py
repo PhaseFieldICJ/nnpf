@@ -29,12 +29,23 @@ r = (radius**2 - 2*t).sqrt()
 c = math.pi * r.square()
 
 # Graphs
-plt.plot(t, a, label='model');
-plt.plot(t, b, label='solution');
-plt.plot(t, c, ':', label='exact');
-plt.xlabel('t');
-plt.ylabel('vol');
-plt.legend();
+plt.plot(t, a, label='model')
+plt.plot(t, b, '-.', label='solution')
+plt.plot(t, c, ':', label='exact')
+plt.xlabel('t')
+plt.ylabel('vol')
+plt.legend()
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+plt.plot(t, a - c, label='model')
+plt.plot(t, b - c, '-.', label='solution')
+plt.xlabel('t')
+plt.ylabel('vol')
+plt.legend()
+plt.grid()
+plt.title('Error to exact volume')
 plt.tight_layout()
 plt.show()
 
