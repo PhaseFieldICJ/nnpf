@@ -41,6 +41,7 @@ plt.show()
 
 plt.plot(t, a - c, label='model')
 plt.plot(t, b - c, '-.', label='solution')
+plt.plot(t, c - c, ':', label='exact')
 plt.xlabel('t')
 plt.ylabel('vol')
 plt.legend()
