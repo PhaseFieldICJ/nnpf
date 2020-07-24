@@ -14,4 +14,5 @@
 - 64 bits precision support (see https://github.com/PyTorchLightning/pytorch-lightning/issues/2497)
 - adding dtype in every possible class (eg Domain)
 - possibility to reload a model from a checkpoint and continue training. With possible different learning rate? With different version name (do track history of the training)?
-
+- check on GPU
+- optimization, speed and memory footprint, eg: dataset generated on the fly instead of fully stored, using broadcasting in domain.X and K, lazy expression using Keops, ...
