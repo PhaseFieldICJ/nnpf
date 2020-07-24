@@ -240,9 +240,9 @@ def total_variation_norm(data, power=1, dim=None):
 
     Exemples
     --------
-    >>> a = torch.arange(8).reshape(2, 4)
+    >>> a = torch.arange(8.).reshape(2, 4)
     >>> total_variation_norm(a, dim=1)
-    tensor([3, 3])
+    tensor([3., 3.])
     """
     # Shape of the result
     if dim is None:
