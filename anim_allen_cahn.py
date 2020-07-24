@@ -64,12 +64,20 @@ def add_frame():
 for i in range(25):
     add_frame()
 
-for i in range(600): # TODO: stop when stable
+last_error = [0] * 25
+for i in range(10000):
+    last_u = u.clone()
     u = model(u[None, None, ...])[0, 0, ...]
+
     graph.set_data(image_from(u))
     title.set_text(f"t = {i*model.hparams.dt:.5} ; it = {i}")
     plt.pause(0.01)
     add_frame()
+
+    last_error[1:] = last_error[:-1]
+    last_error[0] = (u - last_u).norm()
+    if max(last_error) <= 1e-6:
+        break
 
 anim_writer.close()
 

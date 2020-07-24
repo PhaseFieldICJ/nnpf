@@ -13,4 +13,5 @@
 - dataset generation and loss calculation on multiple steps in a dedicated class (eg EvolutionProblem)?
 - 64 bits precision support (see https://github.com/PyTorchLightning/pytorch-lightning/issues/2497)
 - adding dtype in every possible class (eg Domain)
-- FIXME: loading a AllenCahnDR from a AllenCahnProblem!!!
+- possibility to reload a model from a checkpoint and continue training. With possible different learning rate? With different version name (do track history of the training)?
+
