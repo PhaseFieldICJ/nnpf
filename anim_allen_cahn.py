@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import argparse
 import imageio
 import numpy as np
+import torch
 
 # Command-line arguments
 parser = argparse.ArgumentParser()
@@ -17,7 +18,7 @@ parser.add_argument("checkpoint", type=str, help="Path to the model's checkpoint
 args = parser.parse_args()
 
 # Loading model
-model = AllenCahnProblem.load_from_checkpoint(args.checkpoint)
+model = AllenCahnProblem.load_from_checkpoint(args.checkpoint, map_location=torch.device("cpu"))
 model.freeze()
 
 # Defining initial shape
@@ -43,7 +44,7 @@ u = pf.profil(s(*model.domain.X), model.hparams.epsilon)
 
 
 # Graph
-scale = 0.25 * max((b[1] - b[0]) / n for b, n in zip(model.domain.bounds, model.domain.N)) * 256
+scale = 0.25 * max(b[1] - b[0] for b, n in zip(model.domain.bounds, model.domain.N))
 def image_from(u):
     return shapes.display(pf.iprofil(u, model.hparams.epsilon), scale=scale, return_image=True).transpose(0, 1)
 

@@ -89,7 +89,7 @@ class Problem(pl.LightningModule):
         checkpoint['class_name'] = cls.__name__
 
     @classmethod
-    def load_from_checkpoint(cls, checkpoint_path, *args, **kwargs):
+    def load_from_checkpoint(cls, checkpoint_path, *args, map_location=None, **kwargs):
         """ Load model from checkpoint with automatic model forward """
         import inspect
 
@@ -100,7 +100,7 @@ class Problem(pl.LightningModule):
         if inspect.isabstract(cls):
             import importlib.util
             import torch
-            checkpoint = torch.load(checkpoint_path)
+            checkpoint = torch.load(checkpoint_path, map_location=map_location)
 
             # From https://stackoverflow.com/a/67692
             spec = importlib.util.spec_from_file_location("model", checkpoint["class_path"])
@@ -113,10 +113,10 @@ class Problem(pl.LightningModule):
                 raise ImportError(f"{model_cls.__name__} is not a model of problem {cls.__name__}")
 
             # Load checkpoint from the right class
-            return model_cls.load_from_checkpoint(checkpoint_path, *args, **kwargs)
+            return model_cls.load_from_checkpoint(checkpoint_path, *args, map_location=map_location, **kwargs)
 
         else:
-            return super().load_from_checkpoint(checkpoint_path, *args, **kwargs)
+            return super().load_from_checkpoint(checkpoint_path, *args, map_location=map_location, **kwargs)
 
     @staticmethod
     def add_model_specific_args(parent_parser):

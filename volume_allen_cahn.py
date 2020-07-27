@@ -17,7 +17,7 @@ parser.add_argument("checkpoint", type=str, help="Path to the model's checkpoint
 args = parser.parse_args()
 
 # Loading model
-model = AllenCahnProblem.load_from_checkpoint(args.checkpoint)
+model = AllenCahnProblem.load_from_checkpoint(args.checkpoint, map_location=torch.device("cpu"))
 model.freeze()
 
 # Exact volume
