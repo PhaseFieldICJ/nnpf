@@ -37,7 +37,7 @@ class Reaction(ReactionProblem):
         self.model = nn_models.Function(1, 1, *layers)
 
     def forward(self, x):
-        return self.model(x)
+        return self.model(x.reshape(-1, 1)).reshape(x.shape)
 
     @staticmethod
     def add_model_specific_args(parent_parser):
