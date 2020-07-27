@@ -4,7 +4,7 @@
 - CHECK Convolution classes & add `flat_meshgrid`
 - launch script from hyper parameters YAML file
 - tools to visualize dataset
-- decorator for `forward` method that detect numpy input, disable grad & reshape ?
+- decorator for `forward` method that detect numpy input, disable grad & reshape? See also reshape in ReactionProblem
 - diff, `total_variation_norm`, norm in another module?
 - consistant way of specifying domain bounds, kernel size, ... in the command-line (e.g. [0,1]x[0,1], 15x15, maybe event [0,1]³ or [0,1]^3 ?!)
 - replace isabstract in `load_from_checkpoint` by a comparison of class path & name (to allow deriving from a complete model)
@@ -15,4 +15,8 @@
 - adding dtype in every possible class (eg Domain)
 - possibility to reload a model from a checkpoint and continue training. With possible different learning rate? With different version name (do track history of the training)?
 - check on GPU
-- optimization, speed and memory footprint, eg: dataset generated on the fly instead of fully stored, using broadcasting in domain.X and K, lazy expression using Keops, ...
+- optimization, speed and memory footprint, eg: dataset generated on the fly instead of fully stored, using broadcasting in domain.X and K, lazy expression using Keops, TorchScript, ...
+- load checkpoint from GPU to CPU (use `map_location` or always save to cpu?)
+- investigate high cpu load (eg on cluster24-math)
+- check error with kernel size of 256 and domain size of 256 in HeatArray
+- method for saving model (without trainer)
