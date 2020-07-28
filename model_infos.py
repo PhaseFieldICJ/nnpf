@@ -22,9 +22,10 @@ def display_model_infos(model_or_path, recursive=True):
 
     is_path = isinstance(model_or_path, str)
     if is_path:
+        map_location = torch.device("cpu")
         checkpoint_path = problem.checkpoint_from_path(model_or_path)
-        extra_data = torch.load(checkpoint_path)
-        model = problem.Problem.load_from_checkpoint(checkpoint_path)
+        extra_data = torch.load(checkpoint_path, map_location=map_location)
+        model = problem.Problem.load_from_checkpoint(checkpoint_path, map_location=map_location)
     else:
         model = model_or_path
 
@@ -52,11 +53,20 @@ Model summary:
     if recursive:
         for key, value in model.hparams.items():
             if isinstance(key, str) and key.find('checkpoint') >= 0:
-                print()
-                msg = f"Dependant model found in {key}:"
-                print('#' * len(msg))
-                print(msg)
-                display_model_infos(value, recursive)
+                if isinstance(value, str):
+                    print()
+                    msg = f"Dependant model found in {key}: {value}"
+                    print('#' * len(msg))
+                    print(msg)
+                    display_model_infos(value, recursive)
+                else:
+                    for i, v in enumerate(value):
+                        print()
+                        msg = f"Dependant model found in {key}[{i}]: {v}"
+                        print('#' * len(msg))
+                        print(msg)
+                        display_model_infos(v, recursive)
+
 
 
 if __name__ == "__main__":
