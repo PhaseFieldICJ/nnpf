@@ -24,38 +24,13 @@ def Function(m, n, *activation_fn):
     return torch.nn.Sequential(*layers)
 
 
-
 class GaussActivation(Module):
     """ Activation function based on a Gaussian """
     def forward(self, x):
         return torch.exp(-(x**2))
 
 
-class LieSplitting(Module):
-    """ Models a Lie splitting composed of 2 given models """
-
-    def __init__(self, A, B):
-        super().__init__()
-        self.A = A
-        self.B = B
-
-    def forward(self, x):
-        return self.A(self.B(x))
-
-
-class StrangSplitting(Module):
-    """ Models a Strang splitting composed of 2 given models """
-
-    def __init__(self, A, B):
-        super().__init__()
-        self.A = A
-        self.B = B
-
-    def forward(self, x):
-        return self.A(self.B(self.A(x)))
-
-
-class ConvolutionArray(torch.nn.Module):
+class ConvolutionArray(Module):
     """ Model a discrete convolution kernel as an array """
 
     def __init__(self, kernel_size, in_channels=1, out_channels=1, stride=1, padding='center', padding_mode='zeros', dilation=1, groups=1, bias=False):
@@ -88,6 +63,9 @@ class ConvolutionArray(torch.nn.Module):
         # Default values and sanity checks
         if type(kernel_size) == int:
             kernel_size = kernel_size,
+
+        # Kernel size must have odd size otherwise the convolution result will have a different size than the input.
+        assert all(k % 2 == 1 for k in kernel_size), "Kernel must have odd size!"
 
         dim = len(kernel_size)
 
@@ -210,6 +188,9 @@ class ConvolutionFunction(torch.nn.Module):
             self.kernel_size = kernel_size,
         else:
             self.kernel_size = kernel_size
+
+        # Kernel size must have odd size otherwise the convolution result will have a different size than the input.
+        assert all(k % 2 == 1 for k in self.kernel_size), "Kernel must have odd size!"
 
         # Padding
         dim = len(self.kernel_size)

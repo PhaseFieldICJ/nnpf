@@ -1,6 +1,4 @@
 - add resulting images to log ?
-- add loaded checkpoints in hyper-parameters.
-- adding hyper-parameters of loaded models in main model hyper-parameters?
 - CHECK Convolution classes & add `flat_meshgrid`
 - launch script from hyper parameters YAML file
 - tools to visualize dataset
@@ -18,5 +16,5 @@
 - optimization, speed and memory footprint, eg: dataset generated on the fly instead of fully stored, using broadcasting in domain.X and K, lazy expression using Keops, TorchScript, ...
 - load checkpoint from GPU to CPU (use `map_location` or always save to cpu?)
 - investigate high cpu load (eg on cluster24-math)
-- check error with kernel size of 256 and domain size of 256 in HeatArray
 - method for saving model (without trainer)
+- what about the training and validation dataset when resuming ? (with seed fixed)
