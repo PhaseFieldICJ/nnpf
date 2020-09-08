@@ -37,7 +37,4 @@ def iprofil(u_eps, epsilon):
     dist: Tensor
         Signed distance field to the interface
     """
-    def atanh(x):
-        return 0.5 * torch.log((1 + x) / (1 - x))
-
-    return 2 * epsilon * atanh(1 - 2 * u_eps)
+    return 2 * epsilon * torch.atanh(1 - 2 * u_eps)

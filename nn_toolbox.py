@@ -302,11 +302,6 @@ def norm(data, p=2, dim=None):
         return torch.norm(data, p, dim)
 
 
-def atanh(x):
-    """ Inverse of torch.tanh (should be available in torch's next version)"""
-    return 0.5 * torch.log((1 + x) / (1 - x))
-
-
 def complex_mul(a, b):
     """
     Multiplication of tensors in complex format (last dimension == 2)
