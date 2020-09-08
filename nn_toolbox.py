@@ -301,3 +301,314 @@ def norm(data, p=2, dim=None):
     else:
         return torch.norm(data, p, dim)
 
+
+def atanh(x):
+    """ Inverse of torch.tanh (should be available in torch's next version)"""
+    return 0.5 * torch.log((1 + x) / (1 - x))
+
+
+def complex_mul(a, b):
+    """
+    Multiplication of tensors in complex format (last dimension == 2)
+
+    Parameters
+    ----------
+    a, b: Tensors
+        Input tensors in complex format (last dimension == 2)
+
+    Examples
+    --------
+    >>> a = torch.Tensor([[1, 0], [0, 1], [1, 2]])
+    >>> b = torch.Tensor([[1, 1], [0, 1], [1, 1]])
+    >>> complex_mul(a, b)
+    tensor([[ 1.,  1.],
+            [-1.,  0.],
+            [-1.,  3.]])
+    """
+    assert a.shape[-1] == 2, "First input doesn't seems to be in complex format"
+    assert b.shape[-1] == 2, "Second input doesn't seems to be in complex format"
+    return torch.stack([a[..., 0] * b[..., 0] - a[..., 1] * b[..., 1],
+                        a[..., 0] * b[..., 1] + a[..., 1] * b[..., 0]], dim=-1)
+
+
+def complex_mul_conj(a, b):
+    """
+    Multiplication of tensors in complex format (last dimension == 2) with conjugate of first operand
+
+    Parameters
+    ----------
+    a, b: Tensors
+        Input tensors in complex format (last dimension == 2)
+
+    Examples
+    --------
+    >>> a = torch.Tensor([[1, 0], [0, 1], [1, 2]])
+    >>> b = torch.Tensor([[1, 1], [0, 1], [1, 1]])
+    >>> complex_mul_conj(a, b)
+    tensor([[ 1.,  1.],
+            [ 1.,  0.],
+            [ 3., -1.]])
+    """
+    assert a.shape[-1] == 2, "First input doesn't seems to be in complex format"
+    assert b.shape[-1] == 2, "Second input doesn't seems to be in complex format"
+    return torch.stack([a[..., 0] * b[..., 0] + a[..., 1] * b[..., 1],
+                        a[..., 0] * b[..., 1] - a[..., 1] * b[..., 0]], dim=-1)
+
+
+def pad(data, padding, mode='constant', value=0.):
+    """
+    Pads tensor.
+
+    Fix issue https://github.com/pytorch/pytorch/issues/20981 with circular
+    padding when right padding is null.
+
+    Also remove dimension restriction for circular padding (i.e. works on
+    any input dimension with any padding length) and is faster than torch
+    version.
+
+    See documentation of torch.nn.functional.pad
+
+    Examples
+    --------
+    >>> x = torch.arange(5.)
+    >>> pad(x, (1, 0), mode='circular')
+    tensor([4., 0., 1., 2., 3., 4.])
+    >>> pad(x, (0, 1), mode='circular')
+    tensor([0., 1., 2., 3., 4., 0.])
+    >>> pad(x, (2, 1), mode='circular')
+    tensor([3., 4., 0., 1., 2., 3., 4., 0.])
+
+    >>> x = torch.rand(2, 3, 4, 5)
+    >>> x1 = pad(x, (4, 3, 2, 1), mode='circular')
+    >>> x2 = torch.nn.functional.pad(x, (4, 3, 2, 1), mode='circular')
+    >>> torch.allclose(x1, x2)
+    True
+
+    >>> x = torch.rand(2, 3, 4, 5, 6)
+    >>> x1 = pad(x, (6, 5, 4, 3, 2, 1), mode='circular')
+    >>> x2 = torch.nn.functional.pad(x, (6, 5, 4, 3, 2, 1), mode='circular')
+    >>> torch.allclose(x1, x2)
+    True
+    """
+
+    if mode != 'circular':
+        return torch.nn.functional.pad(data, padding, mode, value)
+
+    # From torch/nn/functional.py#_pad
+    assert len(padding) % 2 == 0, 'Padding length must be divisible by 2'
+    assert len(padding) // 2 <= data.dim(), 'Padding length too large'
+    assert all(max(padding[i], padding[i+1]) <= data.shape[data.dim() - i//2 - 1] for i in range(0, len(padding), 2)), 'Padding greater than the data size'
+
+    for i in range(0, len(padding), 2):
+        d = i // 2 + 1
+        idxl = [slice(None)] * data.dim()
+        idxr = [slice(None)] * data.dim()
+        idxl[-d] = slice(data.shape[-d] - padding[i], None)
+        idxr[-d] = slice(padding[i+1])
+        data = torch.cat((data[idxl], data, data[idxr]), dim=data.dim() - d)
+
+    return data
+
+
+def conv(data, weight, bias=None, stride=1, padding=0, padding_mode='zeros', dilation=1, groups=1):
+    """
+    Applies a convolution over an input image composed of several input planes.
+
+    Note: works only in 1D, 2D and 3D.
+
+    Parameters
+    ----------
+    data: tensor
+        Input tensor of shape (minibatch, in_channels, Ni...)
+    weight: tensor
+        Filters of shape (out_channels, in_channels/groups, Ki...)
+    bias: tensor
+        Optional tensor of shape (out_channels,)
+    stride: int
+        Stride of the convolution
+    padding: int or tuple
+        Zero-padding added to both sides of the input. 'center' to center the kernel
+    padding_mode: string
+        'zeros', 'reflect', 'replicate' or 'circular'
+    dilation: int
+        Spacing between kernel elements
+    groups: int
+        Number of blocked connections from input channels to output channels
+
+    Returns
+    -------
+    ouput: tensor
+        Result of size ((Ni + 2*padding - dilation*(Ki -1) - 1)/stride + 1...)
+
+    Examples
+    --------
+    >>> weight = torch.tensor([1., 2., 3.]).reshape(1, 1, -1)
+    >>> x = torch.arange(10.).reshape(1, 1, -1)
+
+    >>> conv(x, weight, padding='center')
+    tensor([[[ 3.,  8., 14., 20., 26., 32., 38., 44., 50., 26.]]])
+
+    >>> conv(x, weight, padding='center', padding_mode='circular')
+    tensor([[[12.,  8., 14., 20., 26., 32., 38., 44., 50., 26.]]])
+    """
+
+    dim = data.ndim - 2
+    assert dim >= 1, "Input must have at least 3 dimensions, including minibatch and channels"
+    assert data.ndim == weight.ndim, "Input and weight must have same dimension"
+
+    # Choosing appropriate convolution implementation
+    if dim == 1:
+        convolution = torch.nn.functional.conv1d
+    elif dim == 2:
+        convolution = torch.nn.functional.conv2d
+    elif dim == 3:
+        convolution = torch.nn.functional.conv3d
+    else:
+        raise ValueError('No convolution implementation in dimension {}'.format(dim))
+
+    # Padding
+    if padding == 'center':
+        padding = tuple(s//2 for s in weight.shape[2:])
+    elif isinstance(padding, int):
+        padding = [padding] * dim
+
+    # Padding mode & convolution
+    if padding_mode == 'zeros':
+        return convolution(data,
+                           weight,
+                           bias=bias,
+                           stride=stride,
+                           padding=padding,
+                           dilation=dilation,
+                           groups=groups)
+    else:
+        # See documentation of torch.nn.functional.pad
+        data = pad(data,
+                   tuple(i for p in padding[::-1] for i in [p, p]),
+                   mode=padding_mode)
+        return convolution(data,
+                           weight,
+                           bias=bias,
+                           stride=stride,
+                           padding=0, # Already padded
+                           dilation=dilation,
+                           groups=groups)
+
+
+def fftconv(data, weight, bias=None, padding=0, padding_mode='zeros'):
+    """
+    Applies a convolution over an input image composed of several input planes, using FFT.
+    FIXME: NOT WORKING NOW!!!
+
+    Parameters
+    ----------
+    data: tensor
+        Input tensor of shape (minibatch, in_channels, Ni...)
+    weight: tensor
+        Filters of shape (out_channels, in_channels, Ki...)
+    bias: tensor
+        Optional tensor of shape (out_channels,)
+    padding: int or tuple
+        Zero-padding added to both sides of the input. 'center' to center the kernel
+    padding_mode: string
+        'zeros', 'reflect', 'replicate' or 'circular'
+
+    Returns
+    -------
+    ouput: tensor
+        Result of size (Ni + 2*padding - Ki + 1...)
+
+    Examples
+    --------
+    >>> weight = torch.tensor([1., 2., 3.]).reshape(1, 1, -1)
+    >>> x = torch.arange(10.).reshape(1, 1, -1)
+
+    >>> xw = fftconv(x, weight, padding='center')
+    >>> xw_ref = conv(x, weight, padding='center')
+    >>> torch.allclose(xw, xw_ref)
+    True
+
+    >>> xw = fftconv(x, weight, padding='center', padding_mode='circular')
+    >>> xw_ref = conv(x, weight, padding='center', padding_mode='circular')
+    >>> torch.allclose(xw, xw_ref)
+    True
+
+    >>> x = torch.rand(1, 1, 10, 11)
+    >>> weight = torch.rand(1, 1, 3, 5)
+    >>> xw = fftconv(x, weight, padding='center')
+    >>> xw_ref = conv(x, weight, padding='center')
+    >>> torch.allclose(xw, xw_ref)
+    True
+
+    >>> x = torch.rand(4, 2, 5, 6, 7)
+    >>> weight = torch.rand(1, 2, 3, 3, 5)
+    >>> xw = fftconv(x, weight, padding=(1, 1, 2))
+    >>> xw_ref = conv(x, weight, padding=(1, 1, 2))
+    >>> torch.allclose(xw, xw_ref)
+    True
+
+    """
+
+    # Checking dimensions
+    dim = data.ndim - 2
+    assert dim >= 1, "Input must have at least 3 dimensions, including minibatch and channels"
+    assert data.ndim == weight.ndim, "Input and weight must have same dimension"
+
+    # Padding size
+    if padding == 'center':
+        padding = tuple(s//2 for s in weight.shape[2:])
+    elif isinstance(padding, int):
+        padding = [padding] * dim
+
+    # Padding input
+    padding = tuple(i for p in padding[::-1] for i in [p, p]) # See torch.nn.functional.pad doc
+    if padding_mode == 'zeros':
+        data = pad(data, padding)
+    elif padding_mode != 'circular':
+        data = pad(data, padding, mode=padding_mode)
+    print(data)
+
+    # Padding weight
+    kernel_size = weight.shape[2:]
+    #weight = weight.flip(list(range(2, weight.dim())))
+    weight = pad(weight, tuple(i for ds, ws in zip(data.shape[-1:1:-1], weight.shape[-1:1:-1]) for i in (0, ds - ws)))
+    weight = weight.roll([-(k // 2 - 1) for k in kernel_size], tuple(range(2, weight.dim())))
+    #print(weight.shape)
+
+    # Forward transformation
+    data_hat = torch.rfft(data[:, None, ...], dim)
+    weight_hat = torch.rfft(weight, dim)
+    #print(data_hat.shape)
+    #print(weight_hat.shape)
+
+    # Convolution
+    # Insert dimension in data to take into account the input/output channels
+    output_hat = complex_mul_conj(weight_hat, data_hat)
+    #print(output_hat.shape)
+
+    # Backward transformation
+    output = torch.irfft(output_hat, dim, signal_sizes=data.shape[2:])
+    print(output)
+    output = output.sum(dim=2)
+
+    # Truncate
+    if padding_mode == 'circular':
+        # Using FFT periodicity to pad & trunc only if necessary
+        rel_padding = tuple(i for p, k in zip(padding[::-1], kernel_size[::-1])
+                              for i in [p - (k - 1) // 2, p - k // 2])
+        output = pad(output, tuple(max(0, p) for p in rel_padding), mode='circular')
+        indexing = [slice(None)] * 2 + \
+                   [slice(max(0, -rel_padding[i]), output.shape[i//2 + 2] - max(0, -rel_padding[i + 1]))
+                    for i in range(0, len(rel_padding), 2)[::-1]]
+    else:
+        indexing = [slice(None)] * 2 + \
+                   [slice((kernel_size[i] - 1) // 2, output.shape[i + 2] - kernel_size[i] // 2)
+                    for i in range(dim)]
+
+    output = output[indexing].contiguous()
+
+    # Bias
+    if bias is not None:
+        output += bias # FIXME
+
+    return output

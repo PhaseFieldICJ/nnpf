@@ -6,6 +6,7 @@ Note: some functions are heavily inspired/copied from numpy equivalent functions
 """
 
 import torch
+from nn_toolbox import complex_mul
 
 def fftfreq(n, d=0.1):
     """
@@ -156,30 +157,6 @@ def ifftshift(x, axes=None):
     shift = [-(x.shape[ax] // 2) for ax in axes]
 
     return torch.roll(x, shift, axes)
-
-
-def complex_mul(a, b):
-    """
-    Multiplication of tensors in complex format (last dimension == 2)
-
-    Parameters
-    ----------
-    a, b: Tensors
-        Input tensors in complex format (last dimension == 2)
-
-    Examples
-    --------
-    >>> a = torch.Tensor([[1, 0], [0, 1], [1, 2]])
-    >>> b = torch.Tensor([[1, 1], [0, 1], [1, 1]])
-    >>> complex_mul(a, b)
-    tensor([[ 1.,  1.],
-            [-1.,  0.],
-            [-1.,  3.]])
-    """
-    assert a.shape[-1] == 2, "First input doesn't seems to be in complex format"
-    assert b.shape[-1] == 2, "Second input doesn't seems to be in complex format"
-    return torch.stack([a[..., 0] * b[..., 0] - a[..., 1] * b[..., 1],
-                        a[..., 0] * b[..., 1] + a[..., 1] * b[..., 0]], dim=-1)
 
 
 class Domain:

@@ -18,3 +18,4 @@
 - investigate high cpu load (eg on cluster24-math)
 - method for saving model (without trainer)
 - what about the training and validation dataset when resuming ? (with seed fixed)
+- update to torch 1.6 and use atanh, `view_as_complex`, ...

@@ -31,7 +31,26 @@ class GaussActivation(Module):
 
 
 class ConvolutionArray(Module):
-    """ Model a discrete convolution kernel as an array """
+    """
+    Model a discrete convolution kernel as an array
+
+    Examples
+    --------
+
+    >>> _ = torch.set_grad_enabled(False)
+
+    >>> conv = ConvolutionArray(3)
+    >>> conv.weight[:] = torch.tensor([1., 1., 0.])
+    >>> x = torch.arange(10.)[None, None, ...]
+    >>> conv(x)
+    tensor([[[ 0.,  1.,  3.,  5.,  7.,  9., 11., 13., 15., 17.]]])
+
+    >>> conv = ConvolutionArray(3, padding_mode='circular')
+    >>> conv.weight[:] = torch.tensor([1., 1., 0.])
+    >>> x = torch.arange(10.)[None, None, ...]
+    >>> conv(x)
+    tensor([[[ 9.,  1.,  3.,  5.,  7.,  9., 11., 13., 15., 17.]]])
+    """
 
     def __init__(self, kernel_size, in_channels=1, out_channels=1, stride=1, padding='center', padding_mode='zeros', dilation=1, groups=1, bias=False):
         """
