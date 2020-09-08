@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader, TensorDataset
 import math
 import argparse
 
-from domain import complex_mul, Domain
+from domain import Domain
 from problem import Problem
 import shapes
 import nn_toolbox
@@ -31,7 +31,7 @@ def heat_kernel_freq(domain, dt):
         The discretized heat kernel (complex format)
     """
     kernel = torch.exp(-(2 * math.pi)**domain.dim * sum(k**2 for k in domain.K) * dt)
-    return kernel[..., None] * torch.Tensor([1., 0.]) # To complex format
+    return kernel * (1 + 0j) # FIXME: to complex format
 
 
 def heat_kernel_spatial(domain, dt, truncate=None):
@@ -219,7 +219,7 @@ class HeatSolution:
 
         Support batch and channels
         """
-        return self.domain.ifft(complex_mul(self.kernel, self.domain.fft(u)))
+        return self.domain.ifft(self.kernel * self.domain.fft(u))
 
 
 class HeatProblem(Problem):

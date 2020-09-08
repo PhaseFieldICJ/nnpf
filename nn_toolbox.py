@@ -302,54 +302,6 @@ def norm(data, p=2, dim=None):
         return torch.norm(data, p, dim)
 
 
-def complex_mul(a, b):
-    """
-    Multiplication of tensors in complex format (last dimension == 2)
-
-    Parameters
-    ----------
-    a, b: Tensors
-        Input tensors in complex format (last dimension == 2)
-
-    Examples
-    --------
-    >>> a = torch.Tensor([[1, 0], [0, 1], [1, 2]])
-    >>> b = torch.Tensor([[1, 1], [0, 1], [1, 1]])
-    >>> complex_mul(a, b)
-    tensor([[ 1.,  1.],
-            [-1.,  0.],
-            [-1.,  3.]])
-    """
-    assert a.shape[-1] == 2, "First input doesn't seems to be in complex format"
-    assert b.shape[-1] == 2, "Second input doesn't seems to be in complex format"
-    return torch.stack([a[..., 0] * b[..., 0] - a[..., 1] * b[..., 1],
-                        a[..., 0] * b[..., 1] + a[..., 1] * b[..., 0]], dim=-1)
-
-
-def complex_mul_conj(a, b):
-    """
-    Multiplication of tensors in complex format (last dimension == 2) with conjugate of first operand
-
-    Parameters
-    ----------
-    a, b: Tensors
-        Input tensors in complex format (last dimension == 2)
-
-    Examples
-    --------
-    >>> a = torch.Tensor([[1, 0], [0, 1], [1, 2]])
-    >>> b = torch.Tensor([[1, 1], [0, 1], [1, 1]])
-    >>> complex_mul_conj(a, b)
-    tensor([[ 1.,  1.],
-            [ 1.,  0.],
-            [ 3., -1.]])
-    """
-    assert a.shape[-1] == 2, "First input doesn't seems to be in complex format"
-    assert b.shape[-1] == 2, "Second input doesn't seems to be in complex format"
-    return torch.stack([a[..., 0] * b[..., 0] + a[..., 1] * b[..., 1],
-                        a[..., 0] * b[..., 1] - a[..., 1] * b[..., 0]], dim=-1)
-
-
 def pad(data, padding, mode='constant', value=0.):
     """
     Pads tensor.
@@ -578,7 +530,7 @@ def fftconv(data, weight, bias=None, padding=0, padding_mode='zeros'):
 
     # Convolution
     # Insert dimension in data to take into account the input/output channels
-    output_hat = complex_mul_conj(weight_hat, data_hat)
+    output_hat = weight_hat.conj() * data_hat
     #print(output_hat.shape)
 
     # Backward transformation

@@ -6,7 +6,6 @@ Note: some functions are heavily inspired/copied from numpy equivalent functions
 """
 
 import torch
-from nn_toolbox import complex_mul
 
 def fftfreq(n, d=0.1):
     """
@@ -248,15 +247,13 @@ class Domain:
 
     def fft(self, u):
         """ Real -> Complex FFT with batch and channel support """
-        self._check_real_shape(u)
-        return torch.rfft(u, self.dim, normalized=False, onesided=True)
+        return torch.view_as_complex(torch.rfft(u, self.dim, normalized=False, onesided=True))
 
     def ifft(self, u):
         """ Complex -> Real FFT with batch and channel support """
-        self._check_complex_shape(u)
-        return torch.irfft(u, self.dim, normalized=False, onesided=True, signal_sizes=self.spatial_shape)
+        return torch.irfft(torch.view_as_real(u), self.dim, normalized=False, onesided=True, signal_sizes=self.spatial_shape)
 
-    def freq_shift(self, u, complex_input=False):
+    def freq_shift(self, u):
         """
         Shift the zero-frequency component to the center of the spectrum, with batch and channel support
 
@@ -264,17 +261,11 @@ class Domain:
         ----------
         u: Tensor
             Input tensor
-        complex_input: bool
-            True if input tensor is in complex format (last dimension == 2)
         """
-        if complex_input:
-            self._check_complex_shape(u)
-            return fftshift(u, axes=range(u.ndim - self.dim - 1, self.dim - 2)) # Do not shift last dimension (see rfftfreq)
-        else:
-            assert u.shape[-self.dim:] == self.freq_shape, "Input shape doesn't match domain shape"
-            return fftshift(u, axes=range(u.ndim - self.dim, self.dim - 1)) # Do not shift last dimensin (see rfftfreq)
+        assert u.shape[-self.dim:] == self.freq_shape, "Input shape doesn't match domain shape"
+        return fftshift(u, axes=range(u.ndim - self.dim, u.ndim - 1)) # Do not shift last dimensin (see rfftfreq)
 
-    def freq_ishift(self, u, complex_input=False):
+    def freq_ishift(self, u):
         """
         The inverse of `freq_shift`. Although identical for even-length `x`, the
         functions differ by one sample for odd-length `x`.
@@ -283,17 +274,11 @@ class Domain:
         ----------
         u: Tensor
             Input tensor
-        complex_input: bool
-            True if input tensor is in complex format (last dimension == 2)
         """
-        if complex_input:
-            self._check_complex_shape(u)
-            return ifftshift(u, axes=range(u.ndim - self.dim - 1, self.dim - 2)) # Do not shift last dimension (see rfftfreq)
-        else:
-            assert u.shape[-self.dim:] == self.freq_shape, "Input shape doesn't match domain shape"
-            return ifftshift(u, axes=range(u.ndim - self.dim, self.dim - 1)) # Do not shift last dimensin (see rfftfreq)
+        assert u.shape[-self.dim:] == self.freq_shape, "Input shape doesn't match domain shape"
+        return ifftshift(u, axes=range(u.ndim - self.dim, u.ndim - 1)) # Do not shift last dimensin (see rfftfreq)
 
-    def spatial_shift(self, u, complex_input=False):
+    def spatial_shift(self, u):
         """
         Shift the origin point (index 0) and corners to the center of the array, with batch and channel support
 
@@ -303,9 +288,9 @@ class Domain:
             Input tensor
         """
         self._check_real_shape(u)
-        return fftshift(u, axes=range(u.ndim - self.dim, self.dim))
+        return fftshift(u, axes=range(u.ndim - self.dim, u.ndim))
 
-    def spatial_ishift(self, u, complex_input=False):
+    def spatial_ishift(self, u):
         """
         The inverse of `spatial_shift`. Although identical for even-length `x`, the
         functions differ by one sample for odd-length `x`.
@@ -316,7 +301,7 @@ class Domain:
             Input tensor
         """
         self._check_real_shape(u)
-        return ifftshift(u, axes=range(u.ndim - self.dim, self.dim))
+        return ifftshift(u, axes=range(u.ndim - self.dim, u.ndim))
 
     def __repr__(self):
         return f"Domain( {self.bounds}, {self.N} )"
