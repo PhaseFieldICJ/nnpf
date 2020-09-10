@@ -2,6 +2,7 @@
 
 import torch
 from torch.nn import Module
+from torch.nn.modules.conv import _ConvNd
 
 import nn_toolbox
 
@@ -141,6 +142,72 @@ class ConvolutionArray(Module):
         in order to keep original data type.
         """
         self.Convolution.bias = new_bias
+
+
+class FFTConvolutionArray(_ConvNd):
+    """
+    Model a fft convolution kernel as an array
+
+    Examples
+    --------
+
+    >>> _ = torch.set_grad_enabled(False)
+
+    >>> conv = FFTConvolutionArray(3)
+    >>> conv.weight[:] = torch.tensor([1., 1., 0.])
+    >>> x = torch.arange(10.)[None, None, ...]
+    >>> torch.allclose(conv(x), torch.tensor([[[ 0.,  1.,  3.,  5.,  7.,  9., 11., 13., 15., 17.]]]))
+    True
+
+    >>> conv = FFTConvolutionArray(3, padding_mode='circular')
+    >>> conv.weight[:] = torch.tensor([1., 1., 0.])
+    >>> x = torch.arange(10.)[None, None, ...]
+    >>> torch.allclose(conv(x), torch.tensor([[[ 9.,  1.,  3.,  5.,  7.,  9., 11., 13., 15., 17.]]]))
+    True
+    """
+
+    def __init__(self, kernel_size, in_channels=1, out_channels=1, padding='center', padding_mode='zeros', bias=False):
+        """
+        Parameters:
+        -----------
+        kernel_size: int or tuple
+            Size of the convolution kernel (a list for 2D and 3D convolutions)
+        in_channels: int
+            Number of channels in the input image
+        out_channels: int
+            Number of channels produced by the convolution
+        padding: int or tuple
+            Zero-padding added to both sides of the input. 'center' to center the kernel
+        padding_mode: string
+            'zeros', 'reflect', 'replicate' or 'circular'
+        bias: bool
+             If True, adds a learnable bias to the output.
+
+        """
+
+        # Expand single value to tuple of given size
+        from torch.nn.modules.utils import _ntuple
+
+        # Kernel size determines the dimension
+        kernel_size = _ntuple(1)(kernel_size)
+        ntuple = _ntuple(len(kernel_size))
+
+        # Kernel size must have odd size otherwise the convolution result will have a different size than the input.
+        assert all(k % 2 == 1 for k in kernel_size), "Kernel must have odd size!"
+
+        # Padding
+        if padding == 'center':
+            padding = tuple(s//2 for s in kernel_size)
+        else:
+            padding = ntuple(padding)
+
+        # Using ConvNd base class from PyTorch to create/init weight & bias
+        super().__init__(
+            in_channels, out_channels, kernel_size, 1, padding, 1,
+            False, ntuple(0), 1, bias, padding_mode)
+
+    def forward(self, x):
+        return nn_toolbox.fftconv(x, self.weight, self.bias, self.padding, self.padding_mode)
 
 
 ###############################################################################
