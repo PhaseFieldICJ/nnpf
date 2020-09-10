@@ -457,7 +457,6 @@ def conv(data, weight, bias=None, stride=1, padding=0, padding_mode='zeros', dil
 def fftconv(data, weight, bias=None, padding=0, padding_mode='zeros'):
     """
     Applies a convolution over an input image composed of several input planes, using FFT.
-    FIXME: NOT WORKING NOW!!!
 
     Parameters
     ----------
@@ -506,12 +505,42 @@ def fftconv(data, weight, bias=None, padding=0, padding_mode='zeros'):
     >>> torch.allclose(xw, xw_ref)
     True
 
+    >>> x = torch.rand(4, 2, 5, 6, 7)
+    >>> weight = torch.rand(3, 2, 3, 3, 5)
+    >>> bias = torch.rand(3)
+    >>> xw = fftconv(x, weight, padding=(1, 1, 2), bias=bias)
+    >>> xw_ref = conv(x, weight, padding=(1, 1, 2), bias=bias)
+    >>> torch.allclose(xw, xw_ref)
+    True
+
+    Massive test:
+    >>> import itertools
+    >>> N_range = range(29, 33)
+    >>> k_range = range(9, 13)
+    >>> p_range = range(3, 7)
+    >>> m_range = ('zeros', 'reflect', 'circular')
+    >>> failed = set()
+    >>> for N, k, p, m in itertools.product(N_range, k_range, p_range, m_range):
+    ...     x = torch.rand(5, 2, N)
+    ...     w = torch.rand(3, 2, k)
+    ...     xw = fftconv(x, w, padding=(p,), padding_mode=m)
+    ...     xw_ref = conv(x, w, padding=(p,), padding_mode=m)
+    ...     if xw.shape != xw_ref.shape or not torch.allclose(xw, xw_ref):
+    ...         failed.add((N, k, p, m))
+    >>> failed
+    set()
+
     """
 
     # Checking dimensions
     dim = data.ndim - 2
     assert dim >= 1, "Input must have at least 3 dimensions, including minibatch and channels"
     assert data.ndim == weight.ndim, "Input and weight must have same dimension"
+
+    # Checking padding mode
+    assert padding_mode in ['zeros', 'reflect', 'replicate', 'circular'], "Unsupported padding mode"
+    if padding_mode == 'zeros':
+        padding_mode = 'constant'
 
     # Padding size
     if padding == 'center':
@@ -520,54 +549,50 @@ def fftconv(data, weight, bias=None, padding=0, padding_mode='zeros'):
         padding = [padding] * dim
 
     # Padding input
-    padding = tuple(i for p in padding[::-1] for i in [p, p]) # See torch.nn.functional.pad doc
-    if padding_mode == 'zeros':
-        data = pad(data, padding)
-    elif padding_mode != 'circular':
-        data = pad(data, padding, mode=padding_mode)
-    print(data)
+    # Not needed for circular padding, using periodicity of FFT
+    if padding_mode != 'circular':
+        # See torch.nn.functional.pad doc about the reverse order of the padding spec
+        input_padding = tuple(i for p in padding[::-1] for i in [p, p])
+        data = pad(data, input_padding, mode=padding_mode)
 
-    # Padding weight
+    # Return next odd
+    # Used to virtually pad to the right kernel with even size
+    def next_odd(n):
+        return n if n % 2 else n + 1
+
+    # Padding weight and flip axes
+    # Flipping axes is faster than taking conjugate of data_hat before multiplication
+    #   because weight size is often lower than data size
     kernel_size = weight.shape[2:]
-    #weight = weight.flip(list(range(2, weight.dim())))
-    weight = pad(weight, tuple(i for ds, ws in zip(data.shape[-1:1:-1], weight.shape[-1:1:-1]) for i in (0, ds - ws)))
-    weight = weight.roll([-(k // 2 - 1) for k in kernel_size], tuple(range(2, weight.dim())))
-    #print(weight.shape)
+    weight_padding = [i for n, k in zip(data.shape[:1:-1], kernel_size[::-1])
+                        for i in [(n - next_odd(k)) // 2, n - k - (n - next_odd(k)) // 2]]
+    weight = pad(weight, weight_padding).flip(tuple(range(2, weight.ndim)))
 
     # Forward transformation
-    data_hat = torch.rfft(data[:, None, ...], dim)
-    weight_hat = torch.rfft(weight, dim)
-    #print(data_hat.shape)
-    #print(weight_hat.shape)
+    # Insert dimension in data to take into account the input/output channels
+    data_hat = torch.view_as_complex(torch.rfft(data[:, None, ...], dim))
+    weight_hat = torch.view_as_complex(torch.rfft(weight, dim))
 
     # Convolution
-    # Insert dimension in data to take into account the input/output channels
-    output_hat = weight_hat.conj() * data_hat
-    #print(output_hat.shape)
+    output_hat = torch.view_as_real(data_hat * weight_hat)
 
     # Backward transformation
+    from domain import ifftshift # FIXME: should be in other module!
     output = torch.irfft(output_hat, dim, signal_sizes=data.shape[2:])
-    print(output)
-    output = output.sum(dim=2)
+    output = output.sum(dim=2) # Summing input channels
+    output = ifftshift(output, axes=range(data.ndim - dim , data.ndim))
 
-    # Truncate
+    # Output padding or truncating
     if padding_mode == 'circular':
-        # Using FFT periodicity to pad & trunc only if necessary
-        rel_padding = tuple(i for p, k in zip(padding[::-1], kernel_size[::-1])
-                              for i in [p - (k - 1) // 2, p - k // 2])
-        output = pad(output, tuple(max(0, p) for p in rel_padding), mode='circular')
-        indexing = [slice(None)] * 2 + \
-                   [slice(max(0, -rel_padding[i]), output.shape[i//2 + 2] - max(0, -rel_padding[i + 1]))
-                    for i in range(0, len(rel_padding), 2)[::-1]]
+        output_padding = [i for p, k in zip(padding[::-1], kernel_size[::-1])
+                            for i in [p - k // 2, p - (k - 1 - k // 2)]]
     else:
-        indexing = [slice(None)] * 2 + \
-                   [slice((kernel_size[i] - 1) // 2, output.shape[i + 2] - kernel_size[i] // 2)
-                    for i in range(dim)]
-
-    output = output[indexing].contiguous()
+        output_padding = [i for k in kernel_size[::-1]
+                            for i in [- (k // 2), - (k - 1 - k // 2)]]
+    output = pad(output, output_padding, mode=padding_mode)
 
     # Bias
     if bias is not None:
-        output += bias # FIXME
+        output += bias.reshape((-1,) + (1,) * dim)
 
     return output
