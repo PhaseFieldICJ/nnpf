@@ -324,10 +324,20 @@ def pad(data, padding, mode='constant', value=0.):
     tensor([0., 1., 2., 3., 4., 0.])
     >>> pad(x, (2, 1), mode='circular')
     tensor([3., 4., 0., 1., 2., 3., 4., 0.])
+    >>> pad(x, (2, -1), mode='circular')
+    tensor([3., 4., 0., 1., 2., 3.])
+    >>> pad(x, (-2, 1), mode='circular')
+    tensor([2., 3., 4., 0.])
 
     >>> x = torch.rand(2, 3, 4, 5)
     >>> x1 = pad(x, (4, 3, 2, 1), mode='circular')
     >>> x2 = torch.nn.functional.pad(x, (4, 3, 2, 1), mode='circular')
+    >>> torch.allclose(x1, x2)
+    True
+
+    >>> x = torch.rand(2, 3, 4, 5)
+    >>> x1 = pad(x, (4, 3, -2, 1))
+    >>> x2 = torch.nn.functional.pad(x, (4, 3, -2, 1))
     >>> torch.allclose(x1, x2)
     True
 
@@ -348,11 +358,13 @@ def pad(data, padding, mode='constant', value=0.):
 
     for i in range(0, len(padding), 2):
         d = i // 2 + 1
-        idxl = [slice(None)] * data.dim()
-        idxr = [slice(None)] * data.dim()
-        idxl[-d] = slice(data.shape[-d] - padding[i], None)
-        idxr[-d] = slice(padding[i+1])
-        data = torch.cat((data[idxl], data, data[idxr]), dim=data.dim() - d)
+        idxl = [slice(None)] * data.dim() # Left slice
+        idxr = [slice(None)] * data.dim() # Right slice
+        idxc = [slice(None)] * data.dim() # Center slice (to handle negative padding <=> cropping)
+        idxl[-d] = slice(data.shape[-d] - padding[i], None) # Negative padding => empty slice
+        idxr[-d] = slice(max(0, padding[i+1])) # Negative padding must be set to 0
+        idxc[-d] = slice(max(0, -padding[i]), data.shape[-d] - max(0, -padding[i+1]))
+        data = torch.cat((data[idxl], data[idxc], data[idxr]), dim=data.dim() - d)
 
     return data
 
