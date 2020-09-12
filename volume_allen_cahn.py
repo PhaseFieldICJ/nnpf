@@ -14,6 +14,7 @@ import argparse
 # Command-line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("checkpoint", type=str, help="Path to the model's checkpoint")
+parser.add_argument("--interactive", action="store_true", help="Switch to interactive mode at the end of the script")
 args = parser.parse_args()
 
 # Loading model
@@ -23,30 +24,44 @@ model.freeze()
 # Exact volume
 domain_diameter = min(b[1] - b[0] for b in model.domain.bounds)
 radius = 0.45 * domain_diameter
-a, b = model.check_sphere_volume(radius=radius)
-t = torch.arange(0, a.shape[0]) * model.hparams.dt # FIXME
+
+model_vol, solution_vol = model.check_sphere_volume(radius=radius, progress_bar=True)
+t = torch.arange(0, model_vol.shape[0]) * model.hparams.dt # FIXME
 r = (radius**2 - 2*t).sqrt()
-c = math.pi * r.square()
+exact_vol = math.pi * r.square()
 
 # Graphs
-plt.plot(t, a, label='model')
-plt.plot(t, b, '-.', label='solution')
-plt.plot(t, c, ':', label='exact')
-plt.xlabel('t')
-plt.ylabel('vol')
-plt.legend()
-plt.grid()
-plt.tight_layout()
-plt.show()
+def disp_volume():
+    plt.plot(t, model_vol, label='model')
+    plt.plot(t, solution_vol, '-.', label='solution')
+    plt.plot(t, exact_vol, ':', label='exact')
+    plt.xlabel('t')
+    plt.ylabel('vol')
+    plt.legend()
+    plt.grid()
+    plt.title("Volume of a sphere")
+    plt.tight_layout()
+    plt.show()
 
-plt.plot(t, a - c, label='model')
-plt.plot(t, b - c, '-.', label='solution')
-plt.plot(t, c - c, ':', label='exact')
-plt.xlabel('t')
-plt.ylabel('vol')
-plt.legend()
-plt.grid()
-plt.title('Error to exact volume')
-plt.tight_layout()
-plt.show()
+def disp_error():
+    plt.plot(t, model_vol - exact_vol, label='model')
+    plt.plot(t, solution_vol - exact_vol, '-.', label='solution')
+    plt.plot(t, exact_vol - exact_vol, ':', label='exact')
+    plt.xlabel('t')
+    plt.ylabel('vol')
+    plt.legend()
+    plt.grid()
+    plt.title('Error to exact volume')
+    plt.title("Error of the volume of a sphere")
+    plt.tight_layout()
+    plt.show()
 
+disp_volume()
+disp_error()
+
+# Interactive mode
+if args.interactive:
+    #import code
+    #code.interact(local=locals())
+    from IPython import embed
+    embed(colors="neutral")

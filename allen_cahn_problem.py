@@ -37,7 +37,7 @@ def sphere_dist_MC(X, radius=1., t=0., center=None):
     return shapes.sphere(radius, center)(*X)
 
 
-def check_sphere_volume(model, domain, radius, epsilon, dt, num_steps, center=None):
+def check_sphere_volume(model, domain, radius, epsilon, dt, num_steps, center=None, progress_bar=False):
     """
     Check an Allen-Cahn model by measuring sphere volume decreasing
 
@@ -57,6 +57,8 @@ def check_sphere_volume(model, domain, radius, epsilon, dt, num_steps, center=No
         Number of time steps
     center: list of float
         Sphere center (domain center if None)
+    progress_bar: bool
+        True to display a progress bar
 
     Returns
     -------
@@ -79,7 +81,12 @@ def check_sphere_volume(model, domain, radius, epsilon, dt, num_steps, center=No
 
     u = generate_solution(0)
 
-    for i in range(num_steps + 1):
+    rg = range(num_steps + 1)
+    if progress_bar:
+        from tqdm import tqdm
+        rg = tqdm(rg)
+
+    for i in rg:
         model_volume[i] = vol(u)
         exact_volume[i] = vol(generate_solution(i))
         u = model(u)
@@ -156,7 +163,7 @@ class AllenCahnProblem(Problem):
             w * nn_toolbox.norm(error, p, dim).pow(self.hparams.loss_power)
             for p, w in self.hparams.loss_norms).mean()
 
-    def check_sphere_volume(self, radius=0.45, num_steps=None, center=None):
+    def check_sphere_volume(self, radius=0.45, num_steps=None, center=None, progress_bar=False):
         """
         Check an Allen-Cahn model by measuring sphere volume decreasing
 
@@ -170,6 +177,8 @@ class AllenCahnProblem(Problem):
             Number of time steps. If None, calculate it to reach radius 0.01 * domain diameter
         center: list of float
             Sphere center (domain center if None)
+        progress_bar: bool
+            True to display a progress bar
 
         Returns
         -------
@@ -183,7 +192,7 @@ class AllenCahnProblem(Problem):
         num_steps = num_steps or math.floor(((0.01 * domain_diameter)**2 + radius**2) / (2 * self.hparams.dt))
 
         with torch.no_grad():
-            return check_sphere_volume(self, self.domain, radius, self.hparams.epsilon, self.hparams.dt, num_steps, center)
+            return check_sphere_volume(self, self.domain, radius, self.hparams.epsilon, self.hparams.dt, num_steps, center, progress_bar=progress_bar)
 
     def training_step(self, batch, batch_idx):
         """ Default training step with custom loss function """
