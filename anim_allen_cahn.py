@@ -15,6 +15,7 @@ import torch
 # Command-line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("checkpoint", type=str, help="Path to the model's checkpoint")
+parser.add_argument("--no_save", action="store_true", help="Don't save the animation")
 args = parser.parse_args()
 
 # Loading model
@@ -54,16 +55,17 @@ title = plt.title(f"t = 0 ; it = 0")
 plt.tight_layout()
 plt.pause(1)
 
-# Animation
-anim_writer = imageio.get_writer('anim.avi', fps=25)
+if not args.no_save:
+    # Animation
+    anim_writer = imageio.get_writer('anim.avi', fps=25)
 
-def add_frame():
-    canvas = plt.gcf().canvas
-    image = np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8).reshape(canvas.get_width_height()[::-1] + (3,))
-    anim_writer.append_data(image)
+    def add_frame():
+        canvas = plt.gcf().canvas
+        image = np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8).reshape(canvas.get_width_height()[::-1] + (3,))
+        anim_writer.append_data(image)
 
-for i in range(25):
-    add_frame()
+    for i in range(25):
+        add_frame()
 
 last_error = [0] * 25
 for i in range(10000):
@@ -73,12 +75,15 @@ for i in range(10000):
     graph.set_data(image_from(u))
     title.set_text(f"t = {i*model.hparams.dt:.5} ; it = {i}")
     plt.pause(0.01)
-    add_frame()
+
+    if not args.no_save:
+        add_frame()
 
     last_error[1:] = last_error[:-1]
     last_error[0] = (u - last_u).norm()
     if max(last_error) <= 1e-6:
         break
 
-anim_writer.close()
+if not args.no_save:
+    anim_writer.close()
 
