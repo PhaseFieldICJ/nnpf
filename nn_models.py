@@ -31,7 +31,7 @@ class GaussActivation(Module):
         return torch.exp(-(x**2))
 
 
-class ConvolutionArray(Module):
+class ConvolutionArray(_ConvNd):
     """
     Model a discrete convolution kernel as an array
 
@@ -78,70 +78,30 @@ class ConvolutionArray(Module):
 
         """
 
-        super().__init__()
+        # Expand single value to tuple of given size
+        from torch.nn.modules.utils import _ntuple
 
-        # Default values and sanity checks
-        if type(kernel_size) == int:
-            kernel_size = kernel_size,
+        # Kernel size determines the dimension
+        kernel_size = _ntuple(1)(kernel_size)
+        ntuple = _ntuple(len(kernel_size))
 
         # Kernel size must have odd size otherwise the convolution result will have a different size than the input.
         assert all(k % 2 == 1 for k in kernel_size), "Kernel must have odd size!"
 
-        dim = len(kernel_size)
-
+        # Padding
         if padding == 'center':
             padding = tuple(s//2 for s in kernel_size)
         elif type(padding) == int:
-            padding = padding,
+            padding = ntuple(padding)
 
-        # Arguments
-        args = (in_channels, out_channels, kernel_size)
-        kwargs = {'stride': stride, 'padding': padding, 'padding_mode': padding_mode, 'dilation': dilation, 'groups': groups, 'bias': bias}
+        # Using ConvNd base class from PyTorch to create/init weight & bias
+        super().__init__(
+            in_channels, out_channels, kernel_size, stride, padding, dilation,
+            False, ntuple(0), groups, bias, padding_mode)
 
-        # Choosing appropriate convolution implementation
-        if dim == 1:
-            self.convolution = torch.nn.Conv1d(*args, **kwargs)
-        elif dim == 2:
-            self.convolution = torch.nn.Conv2d(*args, **kwargs)
-        elif dim == 3:
-            self.convolution = torch.nn.Conv3d(*args, **kwargs)
-        else:
-            raise ValueError('No convolution implementation in dimension {}'.format(dim))
 
     def forward(self, x):
-        return self.convolution(x)
-
-    @property
-    def weight(self):
-        """ Return the discretize kernel values """
-        return self.convolution.weight
-
-    @weight.setter
-    def weight(self, new_weight):
-        """ Set the discretize kernel values
-
-        Note
-        ----
-        Prefer modifying using `self.weight[:] = new_weight` syntax
-        in order to keep original data type.
-        """
-        self.convolution.weight = new_weight
-
-    @property
-    def bias(self):
-        """ Return the bias """
-        return self.convolution.bias
-
-    @bias.setter
-    def bias(self, new_bias):
-        """ Set the bias
-
-        Note
-        ----
-        Prefer modifying using `self.bias[:] = new_bias` syntax
-        in order to keep original data type.
-        """
-        self.Convolution.bias = new_bias
+        return nn_toolbox.conv(x, self.weight, self.bias, self.stride, self.padding, self.padding_mode, self.dilation, self.groups)
 
 
 class FFTConvolutionArray(_ConvNd):

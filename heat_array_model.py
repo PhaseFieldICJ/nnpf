@@ -49,7 +49,7 @@ class HeatArray(HeatProblem):
         self.save_hyperparameters('kernel_size', 'padding_mode', 'bias', 'init', 'kernel_norms', 'kernel_power')
 
         # Model
-        self.model = nn_models.ConvolutionArray(
+        self.model = nn_models.FFTConvolutionArray(
             self.hparams.kernel_size,
             padding='center',
             padding_mode=self.hparams.padding_mode,
