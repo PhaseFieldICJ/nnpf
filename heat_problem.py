@@ -30,7 +30,7 @@ def heat_kernel_freq(domain, dt):
     kernel: Tensor
         The discretized heat kernel (complex format)
     """
-    kernel = torch.exp(-(2 * math.pi)**domain.dim * sum(k**2 for k in domain.K) * dt)
+    kernel = torch.exp(-4. * math.pi**2 * sum(k**2 for k in domain.K) * dt)
     return kernel * (1 + 0j) # FIXME: to complex format
 
 
