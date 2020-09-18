@@ -95,6 +95,8 @@ class ConvolutionArray(_ConvNd):
             padding = ntuple(padding)
 
         # Using ConvNd base class from PyTorch to create/init weight & bias
+        stride = ntuple(stride)
+        dilation = ntuple(dilation)
         super().__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
             False, ntuple(0), groups, bias, padding_mode)
@@ -163,7 +165,7 @@ class FFTConvolutionArray(_ConvNd):
 
         # Using ConvNd base class from PyTorch to create/init weight & bias
         super().__init__(
-            in_channels, out_channels, kernel_size, 1, padding, 1,
+            in_channels, out_channels, kernel_size, ntuple(1), padding, ntuple(1),
             False, ntuple(0), 1, bias, padding_mode)
 
     def forward(self, x):
