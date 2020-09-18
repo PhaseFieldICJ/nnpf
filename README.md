@@ -12,8 +12,12 @@ conda create python=3.7 --name nnpf
 conda activate nnpf
 
 conda config --add channels pytorch
-conda install numpy scipy matplotlib jupyter pytorch torchvision cpuonly
-pip install pytorch-lightning
+conda install numpy scipy matplotlib jupyter pytorch torchvision cpuonly pytorch-lightning=0.8.5
+```
+
+**Test** the installation with:
+```bash
+python3 self_test.py
 ```
 
 **Launch** the learning of the reaction term of the Allen-Cahn equation, with default parameters:

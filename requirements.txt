@@ -2,5 +2,5 @@ numpy
 matplotlib
 scipy
 pytorch==1.6.0
-pytorch-lightning>=0.8.3
+pytorch-lightning==0.8.5
 tqdm
