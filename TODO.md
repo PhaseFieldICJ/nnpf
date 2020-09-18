@@ -19,3 +19,4 @@
 - method for saving model (without trainer)
 - what about the training and validation dataset when resuming ? (with seed fixed)
 - add more tests (model learning, checkpointing, loading, ...)
+- AllenCahnSplitting also directly from model (without checkpoint)? (how to save hyperparameters?)
