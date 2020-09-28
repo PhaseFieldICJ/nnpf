@@ -12,7 +12,7 @@ conda create python=3.7 --name nnpf
 conda activate nnpf
 
 conda config --add channels pytorch
-conda install numpy scipy matplotlib jupyter pytorch torchvision cpuonly pytorch-lightning=0.8.5
+conda install numpy matplotlib jupyter pytorch torchvision cpuonly pytorch-lightning=0.8.5
 ```
 
 **Test** the installation with:
