@@ -33,12 +33,13 @@ def pos(X):
     return [b[0] + x * (b[1] - b[0]) for x, b in zip(X, bounds)]
 
 s = shapes.periodic(
+        shapes.translation(
         shapes.union(
             shapes.sphere(radius(0.3), pos([0.5, 0.5])),
             shapes.sphere(radius(0.2), pos([0.7, 0.8])),
             shapes.translation(shapes.box([radius(0.1), radius(0.08)]), pos([0.2, 0.2])),
 
-        ),
+        ), pos([0., 0.2])),
         model.domain.bounds)
 
 u = pf.profil(s(*model.domain.X), model.hparams.epsilon)
@@ -81,7 +82,7 @@ for i in range(10000):
 
     last_error[1:] = last_error[:-1]
     last_error[0] = (u - last_u).norm()
-    if max(last_error) <= 1e-6:
+    if max(last_error) <= 1e-5:
         break
 
 if not args.no_save:
