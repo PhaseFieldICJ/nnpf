@@ -20,3 +20,4 @@
 - what about the training and validation dataset when resuming ? (with seed fixed)
 - add more tests (model learning, checkpointing, loading, ...)
 - AllenCahnSplitting also directly from model (without checkpoint)? (how to save hyperparameters?)
+- faster fftconv with padding != 'circular' using `scipy.fftpack.next_fast_len`
