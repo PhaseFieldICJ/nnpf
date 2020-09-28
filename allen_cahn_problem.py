@@ -13,9 +13,9 @@ import nn_toolbox
 import shapes
 
 
-def sphere_dist_MC(X, radius=1., t=0., center=None):
+def sphere_dist_MC(X, radius=1., t=0., center=None, p=2):
     """
-    Signed distance field to a sphere evolving by mean curvature field
+    Signed distance (lp norm) field to a sphere evolving by mean curvature field
 
     Parameters
     ----------
@@ -27,6 +27,8 @@ def sphere_dist_MC(X, radius=1., t=0., center=None):
         Evaluation time
     center: list of float
         Sphere center
+    p: int, float or float("inf")
+        Power in the lp-norm
 
     Returns
     -------
@@ -34,10 +36,10 @@ def sphere_dist_MC(X, radius=1., t=0., center=None):
         The signed distance field
     """
     radius = torch.as_tensor(radius**2 - 2 * t).max(torch.tensor([0.])).sqrt()
-    return shapes.sphere(radius, center)(*X)
+    return shapes.sphere(radius, center, p=p)(*X)
 
 
-def check_sphere_volume(model, domain, radius, epsilon, dt, num_steps, center=None, progress_bar=False):
+def check_sphere_volume(model, domain, radius, epsilon, dt, num_steps, center=None, p=2, progress_bar=False):
     """
     Check an Allen-Cahn model by measuring sphere volume decreasing
 
@@ -57,6 +59,8 @@ def check_sphere_volume(model, domain, radius, epsilon, dt, num_steps, center=No
         Number of time steps
     center: list of float
         Sphere center (domain center if None)
+    p: int, float or float("inf")
+        Power in the lp-norm
     progress_bar: bool
         True to display a progress bar
 
@@ -71,7 +75,7 @@ def check_sphere_volume(model, domain, radius, epsilon, dt, num_steps, center=No
     center = center or [0.5 * sum(b) for b in domain.bounds]
 
     def generate_solution(i):
-        return profil(sphere_dist_MC(domain.X, radius, i * dt, center), epsilon)[None, None, ...]
+        return profil(sphere_dist_MC(domain.X, radius, i * dt, center, p=p), epsilon)[None, None, ...]
 
     def vol(u):
         return domain.dX.prod() * u.sum()
@@ -104,7 +108,8 @@ class AllenCahnProblem(Problem):
     def __init__(self, bounds, N, epsilon, dt=None,
                  batch_size=None, batch_shuffle=None, lr=1e-3,
                  loss_norms=[[2, 1.]], loss_power=2.,
-                 radius=[0.05, 0.45], train_N=10, train_steps=1, val_N=20, val_steps=5,
+                 radius=[0.05, 0.45], lp=2,
+                 train_N=10, train_steps=1, val_N=20, val_steps=5,
                  **kwargs):
         """ Constructor
 
@@ -130,7 +135,9 @@ class AllenCahnProblem(Problem):
         loss_power: float
             Power applied to each loss term (for regularization purpose).
         radius: tuple or list of 2 floats
-            Bounds on sphere radius (ratio of domain bounds) used for training and validation dataset.
+            Bounds on sphere radius (ratio of domain bounds) used for training and validation datasets.
+        lp: int or float
+            Power of the lp-norm used to defined the spheres in training and validation datasets.
         train_N, val_N: int
             Size of the training and validation datasets
         train_steps, val_steps: int
@@ -149,7 +156,7 @@ class AllenCahnProblem(Problem):
         self.save_hyperparameters(
             'bounds', 'N', 'dt', 'epsilon',
             'batch_size', 'batch_shuffle', 'lr', 'loss_norms', 'loss_power',
-            'radius', 'train_N', 'val_N', 'train_steps', 'val_steps',
+            'radius', 'lp', 'train_N', 'val_N', 'train_steps', 'val_steps',
         )
 
         # Domain
@@ -192,7 +199,7 @@ class AllenCahnProblem(Problem):
         num_steps = num_steps or math.floor(((0.01 * domain_diameter)**2 + radius**2) / (2 * self.hparams.dt))
 
         with torch.no_grad():
-            return check_sphere_volume(self, self.domain, radius, self.hparams.epsilon, self.hparams.dt, num_steps, center, progress_bar=progress_bar)
+            return check_sphere_volume(self, self.domain, radius, self.hparams.epsilon, self.hparams.dt, num_steps, center, p=self.hparams.lp, progress_bar=progress_bar)
 
     def training_step(self, batch, batch_idx):
         """ Default training step with custom loss function """
@@ -246,7 +253,8 @@ class AllenCahnProblem(Problem):
                         self.domain.X,
                         radius=torch.linspace(radius[0], radius[1], num_samples).reshape(-1, *sup_dims),
                         center=center,
-                        t=i*self.hparams.dt),
+                        t=i*self.hparams.dt,
+                        p=self.hparams.lp),
                     self.hparams.epsilon)
                 for i in range(steps + 1))
 
@@ -288,6 +296,13 @@ class AllenCahnProblem(Problem):
             except ValueError:
                 return v
 
+        # Parser for lp norm
+        def int_or_float(v):
+            try:
+                return int(v)
+            except ValueError:
+                return float(v)
+
         parser = Problem.add_model_specific_args(parent_parser)
         group = parser.add_argument_group("Allen-Cahn problem", "Options common to all models of Allen-Cahn equation.")
         group.add_argument('--bounds', type=bounds_parser, default=[[0., 1.],[0., 1.]], help="Domain bounds in format like '[0, 1]x[1, 2.5]'")
@@ -299,6 +314,7 @@ class AllenCahnProblem(Problem):
         group.add_argument('--train_steps', type=int, default=1, help="Number of evolution steps in the training dataset")
         group.add_argument('--val_steps', type=int, default=10, help="Number of evolution steps in the validation dataset")
         group.add_argument('--radius', type=float, nargs=2, default=[0.05, 0.45], help="Bounds on sphere radius (ratio of domain bounds) used for training and validation dataset.")
+        group.add_argument('--lp', type=int_or_float, default=2, help="Power of the lp-norm used to define the spheres for training and validation dataset.")
         group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
         group.add_argument('--batch_shuffle', type=lambda v: bool(int(v)), default=False, help="Shuffle batch (1 to activate)")
         group.add_argument('--lr', type=float, default=1e-3, help="Learning rate")

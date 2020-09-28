@@ -24,11 +24,13 @@ model.freeze()
 # Exact volume
 domain_diameter = min(b[1] - b[0] for b in model.domain.bounds)
 radius = 0.45 * domain_diameter
+dim = len(model.hparams.bounds)
+lp = model.hparams.lp if "lp" in model.hparams else 2
 
 model_vol, solution_vol = model.check_sphere_volume(radius=radius, progress_bar=True)
 t = torch.arange(0, model_vol.shape[0]) * model.hparams.dt # FIXME
 r = (radius**2 - 2*t).sqrt()
-exact_vol = math.pi * r.square()
+exact_vol = 2**dim * math.gamma(1 + 1 / lp)**dim / math.gamma(1 + dim / lp) * r**dim
 
 # Graphs
 def disp_volume():
