@@ -50,23 +50,34 @@ import torch
 ###############################################################################
 # Shapes
 
-def dot():
-    """ Signed distance to a dot """
-    def dist(*X):
-        return sum(x**2 for x in X).sqrt()
+def dot(p=2):
+    """ Signed lp distance to a dot """
+
+    if p == float("inf"):
+        def dist(*X):
+            result = X[0].abs()
+            for x in X[1:]:
+                result = torch.max(result, x.abs())
+            return result
+
+    else:
+        # TODO: if needed, could be optimized for 1 and even power
+        def dist(*X):
+            return sum(x.abs().pow(p) for x in X).pow(1 / p)
 
     return dist
 
-def sphere(radius, center=None):
+def sphere(radius, center=None, p=2):
     """ Signed distance to a sphere """
     if center is None:
-        return rounding(dot(), radius)
+        return rounding(dot(p), radius)
     else:
-        return translation(sphere(radius), center)
+        return translation(sphere(radius, p=p), center)
 
 def box(sizes):
     """ Signed distance to a box """
     def dist(*X):
+        assert len(X) == len(sizes), "Box & coords dimensions do not match!"
         q = torch.stack([x.abs() - s for x, s in zip(X, sizes)])
         z = q.new_zeros(1)
         return torch.max(q, z).norm(dim=0) + torch.min(q.max(dim=0).values, z)
@@ -81,7 +92,7 @@ def reduce(op, *shapes):
     def dist(*X):
         result = shapes[0](*X)
         for s in shapes[1:]:
-            result = op(result, s(*X))
+            result = op(result, s(*X)) # TODO: using out parameters instead of returning
         return result
 
     return dist
