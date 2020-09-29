@@ -57,6 +57,7 @@ class Trainer(pl.Trainer):
             save_top_k=1,
             mode='min',
             period=1,
+            save_last=True,
         )
 
         # Create trainer
