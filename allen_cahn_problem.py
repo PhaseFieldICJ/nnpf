@@ -35,7 +35,8 @@ def sphere_dist_MC(X, radius=1., t=0., center=None, p=2):
     dist: Tensor
         The signed distance field
     """
-    radius = torch.as_tensor(radius**2 - 2 * t).max(torch.tensor([0.])).sqrt()
+    radius = torch.as_tensor(radius**2 - 2 * t, device=X[0].device, dtype=X[0].dtype) \
+                  .max(X[0].new_zeros(1)).sqrt()
     return shapes.sphere(radius, center, p=p)(*X)
 
 
@@ -159,8 +160,9 @@ class AllenCahnProblem(Problem):
             'radius', 'lp', 'train_N', 'val_N', 'train_steps', 'val_steps',
         )
 
-        # Domain
-        self.domain = Domain(self.hparams.bounds, self.hparams.N)
+    @property
+    def domain(self):
+        return Domain(self.hparams.bounds, self.hparams.N, device=self.device)
 
     def loss(self, output, target):
         """ Default loss function """

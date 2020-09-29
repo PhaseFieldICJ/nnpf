@@ -6,8 +6,9 @@ Note: some functions are heavily inspired/copied from numpy equivalent functions
 """
 
 import torch
+import pytorch_lightning as pl
 
-def fftfreq(n, d=0.1):
+def fftfreq(n, d=0.1, device=None):
     """
     Return the Discrete Fourier Transform sample frequencies for complex <-> complex transformations
 
@@ -35,16 +36,16 @@ def fftfreq(n, d=0.1):
     """
 
     val = 1.0 / (n * d)
-    results = torch.empty(n, dtype=torch.int)
+    results = torch.empty(n, dtype=torch.int, device=device)
     N = (n - 1) // 2 + 1
-    p1 = torch.arange(0, N, dtype=torch.int)
+    p1 = torch.arange(0, N, dtype=torch.int, device=device)
     results[:N] = p1
-    p2 = torch.arange(-(n // 2), 0, dtype=torch.int)
+    p2 = torch.arange(-(n // 2), 0, dtype=torch.int, device=device)
     results[N:] = p2
     return results * val
 
 
-def rfftfreq(n, d=0.1):
+def rfftfreq(n, d=0.1, device=None):
     """
     Return the Discrete Fourier Transform sample frequencies for real <-> complex transformations
 
@@ -73,7 +74,7 @@ def rfftfreq(n, d=0.1):
 
     val = 1.0 / (n * d)
     N = n // 2 + 1
-    results = torch.arange(0, N, dtype=torch.int)
+    results = torch.arange(0, N, dtype=torch.int, device=device)
     return results * val
 
 
@@ -204,7 +205,7 @@ class Domain:
     True
     """
 
-    def __init__(self, bounds, N):
+    def __init__(self, bounds, N, device=None):
         """
         Constructor
 
@@ -226,17 +227,29 @@ class Domain:
         if len(self.N) == 1:
             self.N = self.N * self.dim
 
-        # Spatial coordinates
-        x = (torch.linspace(a, b, n) for (a, b), n in zip(self.bounds, self.N))
-        self.X = torch.meshgrid(*x)
-        self.spatial_shape = self.X[0].shape
-        self.dX = torch.Tensor([(b - a) / n for (a, b), n in zip(self.bounds, self.N)])
+        self.device = device
+        self.spatial_shape = self.N
+        self.freq_shape = tuple((*self.N[:-1], self.N[-1] // 2 + 1))
 
-        # Frequency coordinates
-        k = [fftfreq(n, (b - a) / n) for (a, b), n in zip(self.bounds[:-1], self.N[:-1])] \
-             + [rfftfreq(self.N[-1], (self.bounds[-1][1] - self.bounds[-1][0]) / self.N[-1])]
-        self.K = torch.meshgrid(*k)
-        self.freq_shape = self.K[0].shape
+    def _broadcast_shape(self, i):
+        return (1,) * i + (-1,) + (1,) * (self.dim - i - 1)
+
+    @property
+    def X(self):
+        """ Spatial coordinates """
+        return tuple(torch.linspace(a, b, n, device=self.device).reshape(self._broadcast_shape(i)) for i, ((a, b), n) in enumerate(zip(self.bounds, self.N)))
+
+    @property
+    def dX(self):
+        """ Space steps """
+        return torch.Tensor([(b - a) / n for (a, b), n in zip(self.bounds, self.N)])
+
+    @property
+    def K(self):
+        """ Frequency coordinates """
+        k = [fftfreq(n, (b - a) / n, device=self.device) for (a, b), n in zip(self.bounds[:-1], self.N[:-1])] \
+             + [rfftfreq(self.N[-1], (self.bounds[-1][1] - self.bounds[-1][0]) / self.N[-1], device=self.device)]
+        return tuple(k.reshape(self._broadcast_shape(i)) for i, k in enumerate(k))
 
     def _check_real_shape(self, u):
         assert u.shape[-self.dim:] == self.spatial_shape, "Input shape doesn't match domain shape"

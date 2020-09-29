@@ -271,8 +271,9 @@ class HeatProblem(Problem):
                                   'train_N', 'train_radius', 'train_epsilon', 'train_num_shapes', 'train_steps',
                                   'val_N', 'val_radius', 'val_epsilon', 'val_num_shapes', 'val_steps',)
 
-        # Domain
-        self.domain = Domain(self.hparams.bounds, self.hparams.N)
+    @property
+    def domain(self):
+        return Domain(self.hparams.bounds, self.hparams.N, device=self.device)
 
     def loss(self, output, target):
         """ Default loss function """
