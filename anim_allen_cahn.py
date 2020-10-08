@@ -16,6 +16,9 @@ import torch
 parser = argparse.ArgumentParser()
 parser.add_argument("checkpoint", type=str, help="Path to the model's checkpoint")
 parser.add_argument("--no_save", action="store_true", help="Don't save the animation")
+parser.add_argument("--tol", type=float, default=1e-5, help="Tolerance used as a stop criteron")
+parser.add_argument("--no_dist", action="store_true", help="Display phase field instead of distance")
+
 args = parser.parse_args()
 
 # Loading model
@@ -47,8 +50,13 @@ u = pf.profil(s(*model.domain.X), model.hparams.epsilon)
 
 # Graph
 scale = 0.25 * max(b[1] - b[0] for b, n in zip(model.domain.bounds, model.domain.N))
-def image_from(u):
-    return shapes.display(pf.iprofil(u, model.hparams.epsilon), scale=scale, return_image=True).transpose(0, 1)
+
+if not args.no_dist:
+    def image_from(u):
+        return shapes.display(pf.iprofil(u, model.hparams.epsilon), scale=scale, return_image=True).transpose(0, 1)
+else:
+    def image_from(u):
+        return u.transpose(0, 1)
 
 plt.figure(figsize=(6, 6))
 graph = plt.imshow(image_from(u), extent=[*model.domain.bounds[0], *model.domain.bounds[1]], interpolation="kaiser", origin="lower")
@@ -82,7 +90,7 @@ for i in range(10000):
 
     last_error[1:] = last_error[:-1]
     last_error[0] = (u - last_u).norm()
-    if max(last_error) <= 1e-5:
+    if max(last_error) <= args.tol:
         break
 
 if not args.no_save:
