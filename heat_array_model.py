@@ -64,6 +64,10 @@ class HeatArray(HeatProblem):
                     if self.hparams.init == 'solution':
                         self.model.weight[:] += heat_problem.heat_kernel_spatial(self.domain, self.hparams.dt, self.hparams.kernel_size)
 
+    @property
+    def weight(self):
+        return self.model.weight
+
     # TODO: auto reshape when no batch nor channel are included
     def forward(self, x):
         return self.model(x)
