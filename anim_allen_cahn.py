@@ -5,6 +5,7 @@ Draft script that save animation of Allen-Cahn model evolution
 
 from allen_cahn_problem import AllenCahnProblem
 import shapes
+import visu
 import phase_field as pf
 import matplotlib.pyplot as plt
 import argparse
@@ -50,49 +51,44 @@ u = pf.profil(s(*model.domain.X), model.hparams.epsilon)
 
 # Graph
 scale = 0.25 * max(b[1] - b[0] for b, n in zip(model.domain.bounds, model.domain.N))
-
-if not args.no_dist:
-    def image_from(u):
-        return shapes.display(pf.iprofil(u, model.hparams.epsilon), scale=scale, return_image=True).transpose(0, 1)
-else:
-    def image_from(u):
-        return u.transpose(0, 1)
+extent = [*model.domain.bounds[0], *model.domain.bounds[1]]
+interpolation = "kaiser"
 
 plt.figure(figsize=(6, 6))
-graph = plt.imshow(image_from(u), extent=[*model.domain.bounds[0], *model.domain.bounds[1]], interpolation="kaiser", origin="lower")
+
+if args.no_dist:
+    def data_from(u):
+        return u
+    graph = visu.PhaseFieldShow(data_from(u), extent=extent, interpolation=interpolation)
+else:
+    def data_from(u):
+        return pf.iprofil(u, model.hparams.epsilon)
+    graph = visu.DistanceShow(data_from(u), scale=scale, extent=extent, interpolation=interpolation)
+
+
 title = plt.title(f"t = 0 ; it = 0")
 plt.tight_layout()
 plt.pause(1)
 
-if not args.no_save:
-    # Animation
-    anim_writer = imageio.get_writer('anim.avi', fps=25)
-
-    def add_frame():
-        canvas = plt.gcf().canvas
-        image = np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8).reshape(canvas.get_width_height()[::-1] + (3,))
-        anim_writer.append_data(image)
+with visu.AnimWriter('anim.avi', fps=25, do_nothing=args.no_save) as anim:
 
     for i in range(25):
-        add_frame()
+        anim.add_frame()
 
-last_error = [0] * 25
-for i in range(10000):
-    last_u = u.clone()
-    u = model(u[None, None, ...])[0, 0, ...]
+    last_error = [0] * 25
 
-    graph.set_data(image_from(u))
-    title.set_text(f"t = {i*model.hparams.dt:.5} ; it = {i}")
-    plt.pause(0.01)
+    for i in range(10000):
+        last_u = u.clone()
+        u = model(u[None, None, ...])[0, 0, ...]
 
-    if not args.no_save:
-        add_frame()
+        graph.update(data_from(u))
+        title.set_text(f"t = {i*model.hparams.dt:.5} ; it = {i}")
+        plt.pause(0.01)
 
-    last_error[1:] = last_error[:-1]
-    last_error[0] = (u - last_u).norm()
-    if max(last_error) <= args.tol:
-        break
+        anim.add_frame()
 
-if not args.no_save:
-    anim_writer.close()
+        last_error[1:] = last_error[:-1]
+        last_error[0] = (u - last_u).norm()
+        if max(last_error) <= args.tol:
+            break
 
