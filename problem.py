@@ -5,6 +5,24 @@ Base module and utils for every problem
 import pytorch_lightning as pl
 import argparse
 
+def fix_path(path):
+    """ Convert path from Posix to/from Windows filesystems """
+    # Naive way to find out if given path if from Windows
+    # No really reliable since \\ may come from a valid POSIX path...
+    is_windows = path.find('\\') != -1
+
+    # Returns given path if on right filesystem
+    import os
+    if (is_windows and os.sep == '\\') or (not is_windows and os.sep == '/'):
+        return path
+
+    import pathlib
+    if is_windows:
+        return pathlib.PureWindowsPath(path).as_posix() # Windows -> POSIX
+    else:
+        return str(pathlib.PureWindowsPath(path)) # POSIX -> Windows
+
+
 def checkpoint_from_path(checkpoint_path):
     """
     Returns path if it points to an actual file,
@@ -12,6 +30,7 @@ def checkpoint_from_path(checkpoint_path):
     "path/checkpoints/epoch=*.ckpt"
     """
     import os
+    checkpoint_path = fix_path(checkpoint_path)
 
     # If path if a folder, found last checkpoint from checkpoints subfolder
     if os.path.isdir(checkpoint_path):
@@ -103,7 +122,7 @@ class Problem(pl.LightningModule):
             checkpoint = torch.load(checkpoint_path, map_location=map_location)
 
             # From https://stackoverflow.com/a/67692
-            spec = importlib.util.spec_from_file_location("model", checkpoint["class_path"])
+            spec = importlib.util.spec_from_file_location("model", fix_path(checkpoint["class_path"]))
             foo = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(foo)
             model_cls = getattr(foo, checkpoint["class_name"])

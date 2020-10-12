@@ -174,39 +174,15 @@ def display(shape_or_dist, X=None, scale=1., extent=None, return_image=False):
     >>> display(s, d.X)
     """
 
-    def smoothstep(a, b, x):
-        x = torch.clamp((x - a) / (b - a), 0., 1.)
-        return x.square() * (3 - 2. * x)
+    import warnings
+    import visu
 
-    def mix(a, b, r):
-        return a + (b - a) * r
-
-    # Color from Inigo Quilez
-    # See e.g. https://www.shadertoy.com/view/3t33WH
-    def color(dist):
-        adist = dist[..., None].abs()
-        col = torch.where(dist[..., None] < 0., dist.new([0.6, 0.8, 1.0]), dist.new([0.9, 0.6, 0.3]))
-        col *= 1.0 - (-9.0 / scale * adist).exp()
-        col *= 1.0 + 0.2 * torch.cos(128.0 / scale * adist)
-        return mix(col, dist.new_ones(3), 1.0 - smoothstep(0., scale * 0.015, adist))
-
-    # Calculating distance
-    if not torch.is_tensor(shape_or_dist):
-        shape_or_dist = shape_or_dist(*X)
-    shape_or_dist = shape_or_dist.squeeze()
-    assert shape_or_dist.dim() == 2, "Can only display 2D distance fields"
-
-    # Image
-    image = color(shape_or_dist).clamp(0., 1.)
     if return_image:
-        return image
-
-    # Extent
-    if X is not None and extent is None:
-        extent = [X[0].min(), X[0].max(), X[1].min(), X[1].max()]
-
-    # Display
-    import matplotlib.pyplot as plt
-    plt.imshow(image, extent=extent)
-    plt.show()
+        warnings.warn("You should use visu.distance_to_img instead", FutureWarning)
+        return visu.distance_to_img(shape_or_dist, X, scale, extent)
+    else:
+        warnings.warn("You should use visu.DistanceShow instead", FutureWarning)
+        import matplotlib.pyplot as plt
+        visu.DistanceShow(shape_or_dist, X, scale, extent)
+        plt.show()
 
