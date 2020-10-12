@@ -7,12 +7,15 @@ cd nn-phase-field
 ```
 
 **Install** miniconda or anaconda, then prepare an environment:
+- for CPU only:
 ```bash
-conda create python=3.7 --name nnpf
-conda activate nnpf
-
-conda config --add channels pytorch
-conda install numpy matplotlib jupyter pytorch torchvision cpuonly pytorch-lightning=0.8.5
+conda env create -f environment_cpu.yml
+conda activate nnpf_cpu
+```
+- for CPU and GPU:
+```bash
+conda env create -f environment_gpu.yml
+conda activate nnpf_gpu
 ```
 
 **Test** the installation with:
@@ -28,6 +31,12 @@ and/or with custom hidden layers:
 ```bash
 python3 reaction_model.py --batch_size 10 --layer_dims 8 8 3 --activation ReLU
 ```
+
+If you have an CUDA compatible GPU, you can speedup the learning by simply adding the `--gpu` option:
+```bash
+python3 reaction_model.py --batch_size 10 --layer_dims 8 8 3 --activation ReLU --gpu 1
+```
+
 
 **Visualize** the loss evolution and compare hyper-parameters using TensorBoard:
 ```bash
