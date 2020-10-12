@@ -46,6 +46,7 @@ tensor([[ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571],
 """
 
 import torch
+from torch.distributions.utils import broadcast_all
 
 ###############################################################################
 # Shapes
@@ -78,7 +79,8 @@ def box(sizes):
     """ Signed distance to a box """
     def dist(*X):
         assert len(X) == len(sizes), "Box & coords dimensions do not match!"
-        q = torch.stack([x.abs() - s for x, s in zip(X, sizes)])
+        # FIXME: better way than using broadcast_all!!!
+        q = torch.stack(broadcast_all(*[x.abs() - s for x, s in zip(X, sizes)]))
         z = q.new_zeros(1)
         return torch.max(q, z).norm(dim=0) + torch.min(q.max(dim=0).values, z)
 
