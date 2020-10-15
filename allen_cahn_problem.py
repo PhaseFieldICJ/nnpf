@@ -198,7 +198,7 @@ class AllenCahnProblem(Problem):
         """
         domain_diameter = min(b[1] - b[0] for b in self.domain.bounds)
         radius = radius * domain_diameter
-        num_steps = num_steps or math.floor(((0.01 * domain_diameter)**2 + radius**2) / (2 * self.hparams.dt))
+        num_steps = num_steps or math.floor((radius**2 - (0.01 * domain_diameter)**2) / (2 * self.hparams.dt))
 
         with torch.no_grad():
             return check_sphere_volume(self, self.domain, radius, self.hparams.epsilon, self.hparams.dt, num_steps, center, p=self.hparams.lp, progress_bar=progress_bar)
