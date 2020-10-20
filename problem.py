@@ -208,27 +208,26 @@ class Problem(pl.LightningModule):
             pl.seed_everything(self.hparams.seed)
             # Should also enable deterministic behavior in the trainer parameters
 
-    def dispatch_metrics(self, metrics):
+    def dispatch_metrics(self, metrics, prog_bar=True, logger=True, on_step=False, on_epoch=True, **kwargs):
         """ Dispatch metrics (e.g. loss) to log and progress bar """
 
         def transform_key(key):
             if key == 'loss':
                 return 'train_loss'
+            elif key == 'metric':
+                return 'hp_metric'
             else:
                 return key
 
-        def format_value(value):
-            return f"{value:.2e}" # Fixed width value to avoid shaking progress bar
-
         # Global metric (default to validation loss)
-        if 'val_loss' in metrics and 'metric' not in metrics:
-            metrics['metric'] = metrics['val_loss']
+        if 'val_loss' in metrics and 'metric' not in metrics and 'hp_metric' not in metrics:
+            metrics['hp_metric'] = metrics['val_loss']
 
-        return {
-            **metrics,
-            'log': {transform_key(key): value for key, value in metrics.items()},
-            'progress_bar': {transform_key(key): format_value(value) for key, value in metrics.items()},
-        }
+        # Log metric
+        for key, value in metrics.items():
+            self.log(transform_key(key), value, prog_bar, logger, on_step, on_epoch, **kwargs)
+
+        return metrics
 
     def on_save_checkpoint(self, checkpoint):
         """ Called just before checkpointing """

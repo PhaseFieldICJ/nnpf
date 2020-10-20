@@ -275,6 +275,11 @@ class HeatProblem(Problem):
 
     @property
     def domain(self):
+        """
+        Domain associated to the problem
+
+        As a property so that to generate it on the save device as the model
+        """
         return Domain(self.hparams.bounds, self.hparams.N, device=self.device)
 
     def loss(self, output, target):
@@ -305,13 +310,7 @@ class HeatProblem(Problem):
             metric_l2 += self.hparams.dt * self.domain.dX.prod() * (target - data).square().sum(dim=list(range(2, 2 + self.domain.dim))).sqrt().mean()
             loss += self.hparams.dt * self.loss(data, target)
 
-        return {'val_loss': loss, 'metric_l2': metric_l2}
-
-    def validation_epoch_end(self, outputs):
-        """ Called at epoch end of the validation step (after all batches) """
-        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-        avg_l2_metric = torch.stack([x['metric_l2'] for x in outputs]).mean()
-        return self.dispatch_metrics({'val_loss': avg_loss, 'metric': avg_l2_metric})
+        self.dispatch_metrics({'val_loss': loss, 'metric': metric_l2})
 
     def configure_optimizers(self):
         """ Default optimizer """

@@ -2,7 +2,7 @@
 
 import os
 import pytorch_lightning as pl
-from pytorch_lightning.logging import TensorBoardLogger
+from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 
 class Trainer(pl.Trainer):
@@ -48,12 +48,17 @@ class Trainer(pl.Trainer):
             deterministic = args.deterministic
 
         # Logger
-        logger = TensorBoardLogger(default_root_dir, name=name, version=args.version)
+        logger = TensorBoardLogger(
+            default_root_dir,
+            name=name,
+            version=args.version,
+            default_hp_metric=True,
+        )
 
         # Checkpointer
         checkpointer = ModelCheckpoint(
             filepath=None,
-            monitor='metric',
+            monitor='hp_metric',
             save_top_k=1,
             mode='min',
             period=1,
@@ -66,38 +71,10 @@ class Trainer(pl.Trainer):
             logger=logger,
             checkpoint_callback=checkpointer,
             default_root_dir=default_root_dir,
-            deterministic=deterministic)
-
-    def run_pretrain_routine(self, model):
-        """Sanity check a few things before starting actual training.
-
-        Overriding base class to add metric in logger, see
-        https://github.com/PyTorchLightning/pytorch-lightning/issues/1778#issuecomment-653733246
-
-        Args:
-            model: The model to run sanity test on.
-        """
-        self.logger_backup = self.logger
-        self.logger = None # Disabling logger to control hyperparameters
-        super().run_pretrain_routine(model)
+            deterministic=deterministic,
+        )
 
     def train(self):
-        """
-        Overriding base class to add metric in logger, see
-        https://github.com/PyTorchLightning/pytorch-lightning/issues/1778#issuecomment-653733246
-        """
-
-        self.logger = self.logger_backup
-
-        # log hyper-parameters
-        if self.logger is not None:
-            # save exp to get started
-            self.logger.log_hyperparams(
-                params=self.model.hparams,
-                metrics={self.checkpoint_callback.monitor: self.checkpoint_callback.best_model_score}
-            )
-            self.logger.save()
-
         # Saving initial state
         path = os.path.join(self.logger.log_dir, "checkpoints")
         os.makedirs(path, exist_ok=True)
