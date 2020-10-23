@@ -80,11 +80,22 @@ def box(sizes):
     def dist(*X):
         assert len(X) == len(sizes), "Box & coords dimensions do not match!"
         # FIXME: better way than using broadcast_all!!!
-        q = torch.stack(broadcast_all(*[x.abs() - s for x, s in zip(X, sizes)]))
+        q = torch.stack(broadcast_all(*[x.abs() - s/2 for x, s in zip(X, sizes)]))
         z = q.new_zeros(1)
         return torch.max(q, z).norm(dim=0) + torch.min(q.max(dim=0).values, z)
 
     return dist
+
+def half_plane(dim, shift=0.):
+    """ Signed distance to the half plane with normal along dim """
+    def dist(*X):
+        return sum((dim == i) * (x - shift) for i, x in enumerate(X))
+
+    return dist
+
+def beam(dim, thickness):
+    """ Signed distance to the infinite beam with normal along dim """
+    return subtraction(half_plane(dim, thickness / 2), half_plane(dim, -thickness / 2))
 
 ###############################################################################
 # Operations
@@ -99,15 +110,43 @@ def reduce(op, *shapes):
 
     return dist
 
+def reverse(shape):
+    """ Reverse interior/exterior of given shape """
+    def dist(*X):
+        return -shape(*X)
+
 def union(*shapes):
     """ Union of shapes (not exact in the interior) """
     return reduce(torch.min, *shapes)
-
 
 def intersection(*shapes):
     """ Intersection of shapes (not exact) """
     return reduce(torch.max, *shapes)
 
+def subtraction(*shapes):
+    """ First shape substracted by the other shapes (not exact) """
+    def op(a, b):
+        return torch.max(a, -b)
+
+    return reduce(op, *shapes)
+    #return intersection(reverse(shapes[0]), union(*shapes[1:))
+
+def symmetric_difference(*shapes):
+    """ Symmetric difference of given shapes (not exact) """
+    def op(a, b):
+        return torch.max(torch.min(a, b), -torch.max(a, b))
+
+    return reduce(op, *shapes)
+    """
+    if len(shapes) == 1:
+        return shapes[0]
+    else:
+        return symmetric_difference(
+            subtraction(
+                union(shapes[0], shapes[1]),
+                intersection(shapes[0], shapes[1])),
+            *shapes[2:])
+    """
 
 def translation(shape, shift):
     """ Translation of a shape (exact) """
@@ -149,6 +188,23 @@ def periodic(shape, bounds):
 
     return union(*(translation(shape, shift) for shift in shift_gen()))
 
+def replicate(shape, periods, limits=None):
+    """ Replicate a shape with given periods (None for no replication) and limits """
+    limits = limits or [None] * len(periods)
+
+    def X_transform(*X):
+        for x, p, l in zip(X, periods, limits):
+            if l is None:
+                yield torch.remainder(x + 0.5 * p, p) - 0.5 * p if p is not None else x
+            else:
+                ll = (l - 1) // 2
+                rl = l - 1 - ll
+                yield x - p * torch.clamp(torch.round(x / p), -ll, rl)
+
+    def dist(*X):
+        return shape(*X_transform(*X))
+
+    return dist
 
 def display(shape_or_dist, X=None, scale=1., extent=None, return_image=False):
     """ Display a 2D shape or distance function.
