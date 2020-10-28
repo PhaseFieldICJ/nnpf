@@ -1,7 +1,7 @@
 """ Machine learning models """
 
 import torch
-from torch.nn import Module
+from torch.nn import Module, ModuleList, Linear
 from torch.nn.modules.conv import _ConvNd
 
 import nn_toolbox
@@ -29,6 +29,60 @@ class GaussActivation(Module):
     """ Activation function based on a Gaussian """
     def forward(self, x):
         return torch.exp(-(x**2))
+
+
+class Parallel(Module):
+    """ A parallel container.
+
+    Modules will be stacked in a parallel container, with a linear combination
+    of the outputs and an optional input broadcast factor.
+
+    Parameters
+    ----------
+    modules: iterable
+        The modules
+    input_factor: bool
+        True to add a scale factor of the input for each module
+    bias: bool
+        True to add the bias (input and ouput linear combination)
+
+    Examples
+    --------
+    >>> model = Parallel(Linear(2, 4), Linear(2, 4), Linear(2, 4))
+    >>> data = torch.rand(10, 1, 2)
+    >>> output = model(data)
+    >>> target = sum(model.output.weight[0, i] * module(data) for i, module in enumerate(model.list))
+    >>> torch.allclose(output, target)
+    True
+
+    >>> model = Parallel(Linear(2, 4), Linear(2, 4), Linear(2, 4), input_factor=True)
+    >>> data = torch.rand(10, 1, 2)
+    >>> output = model(data)
+    >>> target = sum(model.output.weight[0, i] * module(model.input.weight[i, 0] * data) for i, module in enumerate(model.list))
+    >>> torch.allclose(output, target)
+    True
+    """
+
+    def __init__(self, *modules, input_factor=False, bias=False):
+        super().__init__()
+        self.list = ModuleList(modules)
+        if input_factor:
+            self.input = Linear(1, len(self.list), bias=bias)
+        else:
+            self.input = None
+        self.output = Linear(len(self.list), 1, bias=bias)
+
+    def forward(self, data):
+        data = data.unsqueeze(-1)
+        if self.input is None:
+            data = data.expand(*data.shape[:-1], len(self.list))
+        else:
+            data = self.input(data)
+
+        data = torch.stack(
+            tuple(module(data[..., i]) for i, module in enumerate(self.list)),
+            dim=-1)
+        return self.output(data).squeeze(-1)
 
 
 class ConvolutionArray(_ConvNd):
