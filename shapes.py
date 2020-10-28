@@ -86,16 +86,36 @@ def box(sizes):
 
     return dist
 
-def half_plane(dim, shift=0.):
-    """ Signed distance to the half plane with normal along dim """
-    def dist(*X):
-        return sum((dim == i) * (x - shift) for i, x in enumerate(X))
+def half_plane(dim_or_normal, shift=0., normalize=False):
+    """
+    Signed distance to the half plane with given normal
+
+    Parameters
+    ----------
+    dim_or_normal: int or iterable
+        If integer, dimension orthogonal to the plane.
+        If iterable, normal vector to the plane.
+    shift: float
+        Shift from the origin (factor of the normal's norm)
+    normalize: bool
+        True to normalize the given normal
+    """
+
+    if isinstance(dim_or_normal, int):
+        def dist(*X):
+            return sum((dim_or_normal == i) * x for i, x in enumerate(X)) - shift
+    else:
+        normal = torch.tensor(dim_or_normal)
+        if normalize:
+            normal /= normal.norm()
+        def dist(*X):
+            return sum(n * x for n, x in zip(normal, X)) - shift
 
     return dist
 
-def beam(dim, thickness):
+def beam(dim_or_normal, thickness, normalize=False):
     """ Signed distance to the infinite beam with normal along dim """
-    return subtraction(half_plane(dim, thickness / 2), half_plane(dim, -thickness / 2))
+    return subtraction(half_plane(dim_or_normal, thickness / 2, normalize), half_plane(dim_or_normal, -thickness / 2, normalize))
 
 ###############################################################################
 # Operations
