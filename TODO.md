@@ -20,3 +20,6 @@
 - add more tests (model learning, checkpointing, loading, ...)
 - AllenCahnSplitting also directly from model (without checkpoint)? (how to save hyperparameters?)
 - faster fftconv with padding != 'circular' using `scipy.fftpack.next_fast_len`
+- base class for Allen-Cahn and Willmore problem
+- training and validation dataset in dedicated class (using LightningDataModule)
+
