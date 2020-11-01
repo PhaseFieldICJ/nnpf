@@ -139,17 +139,32 @@ def get_model_by_name(name):
     Search in global namespace, nn_models and torch.nn.
     """
 
+    # Already a class
+    import inspect
+    if inspect.isclass(name):
+        return name
+
+    # Name is composed of the module and class name
+    if '.' in name:
+        import importlib
+        parts = name.split('.')
+        module = importlib.import_module('.'.join(parts[:-1]))
+        return getattr(module, parts[-1])
+
+    # Class available in current global scope
     try:
         return globals()[name]
     except KeyError:
         pass
 
+    # Class defined in nn_models
     try:
         import nn_models
         return getattr(nn_models, name)
     except AttributeError:
         pass
 
+    # Class defined in PyTorch
     try:
         import torch.nn
         return getattr(torch.nn, name)
