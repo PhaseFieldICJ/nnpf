@@ -72,6 +72,21 @@ class Parallel(Module):
             self.input = None
         self.output = Linear(len(self.list), 1, bias=bias)
 
+    def __len__(self):
+        return len(self.list)
+
+    def __getitem__(self, idx):
+        return self.list[idx]
+
+    def __setitem__(self, idx, module):
+        self.list[idx] = module
+
+    def __delitem__(self, idx):
+        del self.list[idx]
+
+    def __iter__(self):
+        return iter(self.list)
+
     def forward(self, data):
         data = data.unsqueeze(-1)
         if self.input is None:
