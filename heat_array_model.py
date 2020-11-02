@@ -18,7 +18,7 @@ class HeatArray(HeatProblem):
 
         Parameters
         ----------
-        kernel_size: int or tuple
+        kernel_size: int or list
             Size of the convolution kernel (a list for 2D and 3D convolutions)
         padding_mode: string
             'zeros', 'reflect', 'replicate' or 'circular'
@@ -41,7 +41,7 @@ class HeatArray(HeatProblem):
         if isinstance(kernel_size, int):
             kernel_size = [kernel_size]
         else:
-            kernel_size = tuple(kernel_size)
+            kernel_size = list(kernel_size)
         if len(kernel_size) == 1:
             kernel_size = kernel_size * self.domain.dim
 

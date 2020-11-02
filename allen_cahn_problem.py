@@ -135,7 +135,7 @@ class AllenCahnProblem(Problem):
             Exponent e is defined with loss_power parameter.
         loss_power: float
             Power applied to each loss term (for regularization purpose).
-        radius: tuple or list of 2 floats
+        radius: list of 2 floats
             Bounds on sphere radius (ratio of domain bounds) used for training and validation datasets.
         lp: int or float
             Power of the lp-norm used to defined the spheres in training and validation datasets.
