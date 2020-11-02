@@ -24,6 +24,7 @@ parser.add_argument("--scale", type=float, default=1., help="Initial shape scale
 parser.add_argument("--shape", type=str, choices=["bunch", "one", "two", "three", "mixed_one", "mixed_two"], default="bunch", help="Initial shape")
 parser.add_argument("--offscreen", action="store_true", help="Don't display the animation (but still saving")
 parser.add_argument("--gpu", action="store_true", help="Evaluation model on your GPU")
+parser.add_argument("--display_step", type=int, default=1, help="Render frame every given number")
 
 args = parser.parse_args()
 
@@ -139,11 +140,12 @@ with visu.AnimWriter('anim.avi', fps=25, do_nothing=args.no_save) as anim:
             last_u = u.clone()
             u = model(u[None, None, ...])[0, 0, ...]
 
-            graph.update(data_from(u))
-            title.set_text(f"t = {i*model.hparams.dt:.5} ; it = {i}")
-            plt.pause(0.01)
+            if pbar.n % args.display_step == 0:
+                graph.update(data_from(u))
+                title.set_text(f"t = {pbar.n*model.hparams.dt:.5} ; it = {pbar.n}")
+                plt.pause(0.01)
 
-            anim.add_frame()
+                anim.add_frame()
 
             vol = model.domain.dX.prod() * u.sum()
             last_diff[1:] = last_diff[:-1]
