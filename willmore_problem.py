@@ -171,7 +171,7 @@ class WillmoreProblem(Problem):
         """ Default loss function """
         dim = tuple(range(2, 2 + self.domain.dim))
         error = target - output
-        return self.domain.dX.prod() * sum(
+        return (1 / torch.tensor(self.domain.N).prod()) * sum(
             w * nn_toolbox.norm(error, p, dim).pow(self.hparams.loss_power)
             for p, w in self.hparams.loss_norms).mean()
 
@@ -219,7 +219,8 @@ class WillmoreProblem(Problem):
         loss = data.new_zeros([])
         for target in targets:
             data = self.forward(data)
-            loss += self.hparams.dt * self.loss(data, target)
+            loss += self.loss(data, target)
+        loss /= len(targets)
 
         return self.dispatch_metrics({'loss': loss})
 
@@ -229,7 +230,8 @@ class WillmoreProblem(Problem):
         loss = data.new_zeros([])
         for target in targets:
             data = self(data)
-            loss += self.hparams.dt * self.loss(data, target)
+            loss += self.loss(data, target)
+        loss /= len(targets)
 
         return {'val_loss': loss}
 
@@ -239,7 +241,7 @@ class WillmoreProblem(Problem):
 
         # Metric calculation
         model_volume, exact_volume = self.check_sphere_volume()
-        volume_error = self.hparams.dt * (model_volume - exact_volume).norm()
+        volume_error = (model_volume - exact_volume).norm()
 
         return self.dispatch_metrics({'val_loss': avg_loss, 'metric': volume_error})
 
