@@ -17,6 +17,9 @@ modules = [
     'shapes',
     'splitting',
     'trainer',
+    'visu',
+    'willmore_problem',
+    'allen_cahn_splitting',
 ]
 
 failure_count, test_count = 0, 0
