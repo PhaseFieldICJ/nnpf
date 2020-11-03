@@ -7,6 +7,7 @@ import torch.nn as nn
 import nn_models
 import nn_toolbox
 from reaction_problem import ReactionProblem
+from problem import get_default_args
 from trainer import Trainer
 
 import argparse
@@ -40,11 +41,12 @@ class Reaction(ReactionProblem):
         return self.model(x.reshape(-1, 1)).reshape(x.shape)
 
     @staticmethod
-    def add_model_specific_args(parent_parser):
-        parser = ReactionProblem.add_model_specific_args(parent_parser)
+    def add_model_specific_args(parent_parser, defaults={}):
+        parser = ReactionProblem.add_model_specific_args(parent_parser, defaults)
         group = parser.add_argument_group("Reaction model", "Options specific to this model")
-        group.add_argument('--layer_dims', type=int, nargs='+', default=[8, 3], help='Sizes of the hidden layers')
-        group.add_argument('--activation', type=str, default='GaussActivation', help='Name of the activation function')
+        group.add_argument('--layer_dims', type=int, nargs='+', help='Sizes of the hidden layers')
+        group.add_argument('--activation', type=str, help='Name of the activation function')
+        group.set_defaults(**{**get_default_args(Reaction), **defaults})
         return parser
 
 

@@ -5,7 +5,7 @@ from torch.nn import ModuleList
 import argparse
 
 from allen_cahn_problem import AllenCahnProblem
-from problem import Problem
+from problem import Problem, get_default_args
 from heat_problem import HeatProblem
 from reaction_problem import ReactionProblem
 from trainer import Trainer
@@ -86,10 +86,11 @@ class AllenCahnSplitting(AllenCahnProblem):
         return x
 
     @staticmethod
-    def add_model_specific_args(parent_parser):
-        parser = AllenCahnProblem.add_model_specific_args(parent_parser)
+    def add_model_specific_args(parent_parser, defaults={}):
+        parser = AllenCahnProblem.add_model_specific_args(parent_parser, defaults)
         group = parser.add_argument_group("Allen-Cahn equation using splitting", "Options specific to this model")
         group.add_argument('checkpoints', type=str, nargs='+', help="Path to the model's checkpoint")
+        group.set_defaults(**{**get_default_args(AllenCahnSplitting), **defaults})
         return parser
 
 

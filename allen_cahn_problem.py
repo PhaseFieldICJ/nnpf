@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 import math
 
-from problem import Problem
+from problem import Problem, get_default_args
 from domain import Domain
 from phase_field import profil
 import nn_toolbox
@@ -106,9 +106,9 @@ class AllenCahnProblem(Problem):
     Features the train and validation data, and the metric.
     """
 
-    def __init__(self, bounds, N, epsilon, dt=None,
+    def __init__(self, bounds=[[0., 1.], [0., 1.]], N=256, epsilon=2/256, dt=None,
                  batch_size=None, batch_shuffle=None, lr=1e-3,
-                 loss_norms=[[2, 1.]], loss_power=2.,
+                 loss_norms=None, loss_power=2.,
                  radius=[0.05, 0.45], lp=2,
                  train_N=10, train_steps=1, val_N=20, val_steps=5,
                  **kwargs):
@@ -132,6 +132,7 @@ class AllenCahnProblem(Problem):
             Learning rate of the optimizer
         loss_norms: list of pair (p, weight)
             Compose loss as sum of weight * (output - target).norm(p).pow(e).
+            Default to l2 norm.
             Exponent e is defined with loss_power parameter.
         loss_power: float
             Power applied to each loss term (for regularization purpose).
@@ -277,10 +278,10 @@ class AllenCahnProblem(Problem):
         return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size or len(self.val_dataset))
 
     @staticmethod
-    def add_model_specific_args(parent_parser):
-        import re
+    def add_model_specific_args(parent_parser, defaults={}):
 
         # Parser for the domain bounds
+        import re
         def bounds_parser(s):
             bounds = []
             per_dim = s.split('x')
@@ -305,23 +306,24 @@ class AllenCahnProblem(Problem):
             except ValueError:
                 return float(v)
 
-        parser = Problem.add_model_specific_args(parent_parser)
+        parser = Problem.add_model_specific_args(parent_parser, defaults)
         group = parser.add_argument_group("Allen-Cahn problem", "Options common to all models of Allen-Cahn equation.")
-        group.add_argument('--bounds', type=bounds_parser, default=[[0., 1.],[0., 1.]], help="Domain bounds in format like '[0, 1]x[1, 2.5]'")
-        group.add_argument('--N', type=int, nargs='+', default=256, help="Domain discretization")
-        group.add_argument('--epsilon', type=float, default=2/8**3, help="Interface sharpness")
-        group.add_argument('--dt', type=float, default=None, help="Time step (epsilon**2 if None)")
-        group.add_argument('--train_N', type=int, default=100, help="Number of initial conditions in the training dataset")
-        group.add_argument('--val_N', type=int, default=200, help="Number of initial conditions in the validation dataset")
-        group.add_argument('--train_steps', type=int, default=1, help="Number of evolution steps in the training dataset")
-        group.add_argument('--val_steps', type=int, default=10, help="Number of evolution steps in the validation dataset")
-        group.add_argument('--radius', type=float, nargs=2, default=[0.05, 0.45], help="Bounds on sphere radius (ratio of domain bounds) used for training and validation dataset.")
-        group.add_argument('--lp', type=int_or_float, default=2, help="Power of the lp-norm used to define the spheres for training and validation dataset.")
-        group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
-        group.add_argument('--batch_shuffle', type=lambda v: bool(int(v)), default=False, help="Shuffle batch (1 to activate)")
-        group.add_argument('--lr', type=float, default=1e-3, help="Learning rate")
+        group.add_argument('--bounds', type=bounds_parser, help="Domain bounds in format like '[0, 1]x[1, 2.5]'")
+        group.add_argument('--N', type=int, nargs='+', help="Domain discretization")
+        group.add_argument('--epsilon', type=float, help="Interface sharpness")
+        group.add_argument('--dt', type=float, help="Time step (epsilon**2 if None)")
+        group.add_argument('--train_N', type=int, help="Number of initial conditions in the training dataset")
+        group.add_argument('--val_N', type=int, help="Number of initial conditions in the validation dataset")
+        group.add_argument('--train_steps', type=int, help="Number of evolution steps in the training dataset")
+        group.add_argument('--val_steps', type=int, help="Number of evolution steps in the validation dataset")
+        group.add_argument('--radius', type=float, nargs=2, help="Bounds on sphere radius (ratio of domain bounds) used for training and validation dataset.")
+        group.add_argument('--lp', type=int_or_float, help="Power of the lp-norm used to define the spheres for training and validation dataset.")
+        group.add_argument('--batch_size', type=int, help="Size of batch")
+        group.add_argument('--batch_shuffle', type=lambda v: bool(int(v)), help="Shuffle batch (1 to activate)")
+        group.add_argument('--lr', type=float, help="Learning rate")
         group.add_argument('--loss_norms', type=float_or_str, nargs=2, action='append', help="List of (p, weight). Compose loss as sum of weight * (output - target).norm(p).pow(e). Default to l2 norm. Exponent e is defined with loss_power parameter.")
-        group.add_argument('--loss_power', type=float, default=2., help="Power applied to each loss term (for regularization purpose)")
+        group.add_argument('--loss_power', type=float, help="Power applied to each loss term (for regularization purpose)")
+        group.set_defaults(**{**get_default_args(AllenCahnProblem), **defaults})
 
         return parser
 

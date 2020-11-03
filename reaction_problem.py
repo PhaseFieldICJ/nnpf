@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 import argparse
 
-from problem import Problem
+from problem import Problem, get_default_args
 
 class ReactionSolution:
     """
@@ -136,15 +136,16 @@ class ReactionProblem(Problem):
         return self.dispatch_metrics({'val_loss': avg_loss})
 
     @staticmethod
-    def add_model_specific_args(parent_parser):
-        parser = Problem.add_model_specific_args(parent_parser)
+    def add_model_specific_args(parent_parser, defaults={}):
+        parser = Problem.add_model_specific_args(parent_parser, defaults)
         group = parser.add_argument_group("Reaction problem", "Options common to all models of the reaction term.")
-        group.add_argument('--epsilon', type=float, default=2/8**3, help="Interface sharpness")
-        group.add_argument('--dt', type=float, default=None, help="Time step (epsilon**2 if None)")
-        group.add_argument('--margin', type=float, default=0.1, help="[0, 1] expansion length")
-        group.add_argument('--Ntrain', type=int, default=100, help="Size of the training dataset")
-        group.add_argument('--Nval', type=int, default=None, help="Size of the validation dataset (10*Ntrain if None)")
-        group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
-        group.add_argument('--lr', type=float, default=1e-3, help="Learning rate")
+        group.add_argument('--epsilon', type=float, help="Interface sharpness")
+        group.add_argument('--dt', type=float, help="Time step (epsilon**2 if None)")
+        group.add_argument('--margin', type=float, help="[0, 1] expansion length")
+        group.add_argument('--Ntrain', type=int, help="Size of the training dataset")
+        group.add_argument('--Nval', type=int, help="Size of the validation dataset (10*Ntrain if None)")
+        group.add_argument('--batch_size', type=int, help="Size of batch")
+        group.add_argument('--lr', type=float, help="Learning rate")
+        group.set_defaults(**{**get_default_args(ReactionProblem), **defaults})
         return parser
 

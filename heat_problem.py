@@ -10,7 +10,7 @@ import math
 import argparse
 
 from domain import Domain
-from problem import Problem
+from problem import Problem, get_default_args
 import shapes
 import nn_toolbox
 from phase_field import profil
@@ -229,7 +229,8 @@ class HeatProblem(Problem):
     Features the train and validation data.
     """
 
-    def __init__(self, bounds, N, dt, batch_size=None, batch_shuffle=False, lr=1e-3, loss_norms=[[2, 1.]], loss_power=2.,
+    def __init__(self, bounds=[[0., 1.], [0., 1.]], N=256, dt=(2 / 256)**2,
+                 batch_size=None, batch_shuffle=False, lr=1e-3, loss_norms=None, loss_power=2.,
                  train_N=100, train_radius=[0, 0.25], train_epsilon=[0, 0.1], train_num_shapes=1, train_steps=10,
                  val_N=100, val_radius=[0, 0.35], val_epsilon=[0, 0.2], val_num_shapes=[1, 3], val_steps=10,
                  **kwargs):
@@ -257,6 +258,7 @@ class HeatProblem(Problem):
             Learning rate of the optimizer
         loss_norms: list of pair (p, weight)
             Compose loss as sum of weight * (output - target).norm(p).pow(e).
+            Default to l2 norm.
             Exponent e is defined with loss_power parameter.
         loss_power: float
             Power applied to each loss term (for regularization purpose).
@@ -356,10 +358,10 @@ class HeatProblem(Problem):
         return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size or len(self.val_dataset))
 
     @staticmethod
-    def add_model_specific_args(parent_parser):
-        import re
+    def add_model_specific_args(parent_parser, defaults={}):
 
         # Parser for the domain bounds
+        import re
         def bounds_parser(s):
             bounds = []
             per_dim = s.split('x')
@@ -377,20 +379,21 @@ class HeatProblem(Problem):
             except ValueError:
                 return v
 
-        parser = Problem.add_model_specific_args(parent_parser)
+        parser = Problem.add_model_specific_args(parent_parser, defaults)
         group = parser.add_argument_group("Heat equation problem", "Options common to all models of the heat equation.")
-        group.add_argument('--bounds', type=bounds_parser, default=[[0., 1.],[0., 1.]], help="Domain bounds in format like '[0, 1]x[1, 2.5]'")
-        group.add_argument('--N', type=int, nargs='+', default=256, help="Domain discretization")
-        group.add_argument('--dt', type=float, default=(2 / 256)**2, help="Time step")
-        group.add_argument('--train_N', type=int, default=100, help="Number of initial conditions in the training dataset")
-        group.add_argument('--val_N', type=int, default=100, help="Number of initial conditions in the validation dataset")
-        group.add_argument('--train_steps', type=int, default=1, help="Number of evolution steps in the training dataset")
-        group.add_argument('--val_steps', type=int, default=10, help="Number of evolution steps in the validation dataset")
-        group.add_argument('--batch_size', type=int, default=None, help="Size of batch")
-        group.add_argument('--batch_shuffle', type=lambda v: bool(int(v)), default=False, help="Shuffle batch (1 to activate)")
-        group.add_argument('--lr', type=float, default=1e-3, help="Learning rate")
+        group.add_argument('--bounds', type=bounds_parser, help="Domain bounds in format like '[0, 1]x[1, 2.5]'")
+        group.add_argument('--N', type=int, nargs='+', help="Domain discretization")
+        group.add_argument('--dt', type=float, help="Time step")
+        group.add_argument('--train_N', type=int, help="Number of initial conditions in the training dataset")
+        group.add_argument('--val_N', type=int, help="Number of initial conditions in the validation dataset")
+        group.add_argument('--train_steps', type=int, help="Number of evolution steps in the training dataset")
+        group.add_argument('--val_steps', type=int, help="Number of evolution steps in the validation dataset")
+        group.add_argument('--batch_size', type=int, help="Size of batch")
+        group.add_argument('--batch_shuffle', type=lambda v: bool(int(v)), help="Shuffle batch (1 to activate)")
+        group.add_argument('--lr', type=float, help="Learning rate")
         group.add_argument('--loss_norms', type=float_or_str, nargs=2, action='append', help="List of (p, weight). Compose loss as sum of weight * (output - target).norm(p).pow(e). Default to l2 norm. Exponent e is defined with loss_power parameter.")
-        group.add_argument('--loss_power', type=float, default=2., help="Power applied to each loss term (for regularization purpose)")
+        group.add_argument('--loss_power', type=float, help="Power applied to each loss term (for regularization purpose)")
+        group.set_defaults(**{**get_default_args(HeatProblem), **defaults})
 
         return parser
 
