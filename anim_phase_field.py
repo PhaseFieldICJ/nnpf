@@ -25,6 +25,8 @@ parser.add_argument("--shape", type=str, choices=["bunch", "one", "two", "three"
 parser.add_argument("--offscreen", action="store_true", help="Don't display the animation (but still saving")
 parser.add_argument("--gpu", action="store_true", help="Evaluation model on your GPU")
 parser.add_argument("--display_step", type=int, default=1, help="Render frame every given number")
+parser.add_argument("--fps", type=int, default=25, help="Frame per second in the saved animation")
+parser.add_argument("--figsize", type=int, default=[6, 6], nargs=2, help="Figure size in inches")
 
 args = parser.parse_args()
 
@@ -112,7 +114,7 @@ scale = 0.25 * max(b[1] - b[0] for b, n in zip(model.domain.bounds, model.domain
 extent = [*model.domain.bounds[0], *model.domain.bounds[1]]
 interpolation = "kaiser"
 
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=args.figsize)
 
 if args.no_dist:
     def data_from(u):
@@ -128,7 +130,7 @@ title = plt.title(f"t = 0 ; it = 0")
 plt.tight_layout()
 plt.pause(1)
 
-with visu.AnimWriter('anim.avi', fps=25, do_nothing=args.no_save) as anim:
+with visu.AnimWriter('anim.avi', fps=args.fps, do_nothing=args.no_save) as anim:
 
     for i in range(25):
         anim.add_frame()
