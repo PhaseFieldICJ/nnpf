@@ -171,9 +171,9 @@ class WillmoreProblem(Problem):
         """ Default loss function """
         dim = tuple(range(2, 2 + self.domain.dim))
         error = target - output
-        return (1 / torch.tensor(self.domain.N).prod()) * sum(
+        return sum(
             w * nn_toolbox.norm(error, p, dim).pow(self.hparams.loss_power)
-            for p, w in self.hparams.loss_norms).mean()
+            for p, w in self.hparams.loss_norms).mean() / torch.tensor(self.domain.N).prod()
 
     def check_sphere_volume(self, radius=[0.1, 0.2, 0.3, 0.4], num_steps=100, center=None, progress_bar=False):
         """
