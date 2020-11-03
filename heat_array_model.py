@@ -81,6 +81,7 @@ class HeatArray(HeatProblem):
     @staticmethod
     def add_model_specific_args(parent_parser):
 
+        from distutils.util import strtobool
         # Parser for loss definition
         def float_or_str(v):
             try:
@@ -92,7 +93,7 @@ class HeatArray(HeatProblem):
         group = parser.add_argument_group("Heat equation by convolution array", "Options specific to this model")
         group.add_argument('--kernel_size', type=int, nargs='+', required=True, help='Size of the kernel (nD)')
         group.add_argument('--padding_mode', choices=['zeros', 'reflect', 'replicate', 'circular'], default='circular', help="Padding mode for the convolution")
-        group.add_argument('--bias', action='store_true', help="Add a bias to the convolution")
+        group.add_argument('--bias', type=lambda s:bool(strtobool(s)), nargs='?', const=True, default=False, help="Add a bias to the convolution")
         group.add_argument('--init', choices=['zeros', 'random', 'solution'], default='zeros', help="Initialization of the convolution kernel")
         group.add_argument('--kernel_norms', type=float_or_str, default=[], nargs=2, action='append', help="List of (p, weight). Compose the kernel penalization term as sum of weight * kernel.norm(p).pow(e). Exponent e is defined with --kernel_power option.")
         group.add_argument('--kernel_power', type=float, default=2., help="Power applied to each penalization term (for regularization purpose)")
