@@ -336,4 +336,139 @@ class WillmoreProblem(Problem):
         return parser
 
 
+###############################################################################
+# Command-line interface
+###############################################################################
+
+if __name__ == "__main__":
+
+    from willmore_problem import sphere_dist_MC
+    from problem import Problem
+    import shapes
+    import visu
+    import phase_field as pf
+    import argparse
+    import imageio
+    import torch
+    import tqdm
+    import math
+    from functools import reduce
+
+    # Command-line arguments
+    parser = argparse.ArgumentParser(
+        description="Circles evolution compared to the solution of the Willmore flow",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("checkpoint", type=str, help="Path to the model's checkpoint")
+    parser.add_argument("--no_save", action="store_true", help="Don't save the animation")
+    parser.add_argument("--tol", type=float, default=1e-5, help="Tolerance used as a stop criteron")
+    parser.add_argument("--max_frames", type=int, default=-1, help="Maximum number of calculated frames (-1 for illimited)")
+    parser.add_argument("--no_dist", action="store_true", help="Display phase field instead of distance")
+    parser.add_argument("--scale", type=float, default=1., help="Initial shape scale")
+    parser.add_argument("--shape", type=str, choices=["one", "two", "three"], default="one", help="Initial shape")
+    parser.add_argument("--offscreen", action="store_true", help="Don't display the animation (but still saving")
+    parser.add_argument("--gpu", action="store_true", help="Evaluation model on your GPU")
+    parser.add_argument("--display_step", type=int, default=1, help="Render frame every given number")
+    parser.add_argument("--fps", type=int, default=25, help="Frame per second in the saved animation")
+    parser.add_argument("--figsize", type=int, default=[6, 6], nargs=2, help="Figure size in inches")
+
+    args = parser.parse_args()
+
+    # Matplotlib rendering backend
+    if args.offscreen:
+        import matplotlib as mpl
+        mpl.use('Agg')
+    import matplotlib.pyplot as plt
+
+    # Loading model
+    model = Problem.load_from_checkpoint(args.checkpoint, map_location=torch.device("cpu"))
+    model.freeze()
+
+    if args.gpu:
+        model.cuda()
+
+    # Defining initial shape
+    bounds = model.domain.bounds
+    domain_extent = [b[1] - b[0] for b in bounds]
+    domain_diameter = min(domain_extent)
+
+    def radius(r, scale):
+        return scale * r * domain_diameter
+
+    def pos(X, scale):
+        #return [b[0] + (0.5 + scale * (x - 0.5)) * (b[1] - b[0]) for x, b in zip(X, bounds)]
+        return [b[0] + x * (b[1] - b[0]) for x, b in zip(X, bounds)]
+
+    periodic_bounds = bounds.copy()
+
+    # Shape
+    if args.shape == "one":
+        spheres = [(0.3, 0.5, 0.5)]
+
+    elif args.shape == "two":
+        spheres = [(0.1, 0.2, 0.2), (0.2, 0.7, 0.7)]
+
+    elif args.shape == "three":
+        spheres = [(0.1, 0.2, 0.2), (0.2, 0.3, 0.7), (0.05, 0.7, 0.3)]
+
+    s = shapes.union(*(shapes.sphere(radius(p[0], args.scale), pos(p[1:], args.scale)) for p in spheres))
+    dist_sol = lambda t: reduce(torch.min, [sphere_dist_MC(model.domain.X, radius(p[0], args.scale), t, pos(p[1:], args.scale)) for p in spheres])
+
+    # Periodizing
+    s = shapes.periodic(s, periodic_bounds)
+
+    # Phase field
+    u = pf.profil(s(*model.domain.X), model.hparams.epsilon)
+
+    # Graph
+    scale = 0.25 * max(b[1] - b[0] for b, n in zip(model.domain.bounds, model.domain.N))
+    extent = [*model.domain.bounds[0], *model.domain.bounds[1]]
+    interpolation = "kaiser"
+
+    plt.figure(figsize=args.figsize)
+
+    if args.no_dist:
+        def data_from(u):
+            return u.cpu()
+        graph = visu.PhaseFieldShow(data_from(u), extent=extent, interpolation=interpolation)
+    else:
+        def data_from(u):
+            return pf.iprofil(u, model.hparams.epsilon).cpu()
+        graph = visu.DistanceShow(data_from(u), scale=scale, extent=extent, interpolation=interpolation)
+
+    contour = visu.ContourShow(dist_sol(0.), [0.], X=model.domain.X)
+
+    title = plt.title(f"t = 0 ; it = 0")
+    plt.tight_layout()
+    plt.pause(1)
+
+    with visu.AnimWriter('anim.avi', fps=args.fps, do_nothing=args.no_save) as anim:
+
+        for i in range(25):
+            anim.add_frame()
+
+        last_diff = [args.tol + 1] * 25
+
+        with tqdm.tqdm() as pbar:
+            while max(last_diff) > args.tol and pbar.n != args.max_frames:
+                last_u = u.clone()
+                u = model(u[None, None, ...])[0, 0, ...]
+
+                if pbar.n % args.display_step == 0:
+                    graph.update(data_from(u))
+                    contour.update(dist_sol(pbar.n * model.hparams.dt))
+                    title.set_text(f"t = {pbar.n*model.hparams.dt:.5} ; it = {pbar.n}")
+                    plt.pause(0.01)
+
+                    anim.add_frame()
+
+                vol = model.domain.dX.prod() * u.sum()
+                last_diff[1:] = last_diff[:-1]
+                last_diff[0] = (u - last_u).norm().item()
+
+                pbar.update(1)
+                pbar.set_postfix({
+                    'volume': vol.item(),
+                    'diff': last_diff[0],
+                    'max diff': max(last_diff)
+                })
 
