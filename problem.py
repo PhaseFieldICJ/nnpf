@@ -281,7 +281,21 @@ class Problem(pl.LightningModule):
 
         group = parser.add_argument_group("Problem", "Options common to all problems.")
         group.add_argument('--seed', type=int, help="Seed the random generators and disable non-deterministic behavior")
+        group.add_argument('--config', type=str, help="Load configuration from the given YAML file")
         group.set_defaults(**{**get_default_args(Problem), **defaults})
         return parser
 
+    @staticmethod
+    def defaults_from_config():
+        """ Load defaults from a YAML file, if specified in the command line """
+        parser = argparse.ArgumentParser(add_help=False)
+        parser.add_argument('--config', type=str, help="Load configuration from the given YAML file")
+        args, _ = parser.parse_known_args()
+
+        if args.config:
+            import yaml
+            with open(args.config, 'r') as fh:
+                return yaml.safe_load(fh)
+        else:
+            return {}
 

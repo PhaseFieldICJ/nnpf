@@ -14,7 +14,7 @@ import argparse
 
 class HeatArray(HeatProblem):
 
-    def __init__(self, kernel_size, padding_mode='circular', bias=False, init='zeros', kernel_norms=[], kernel_power=2, **kwargs):
+    def __init__(self, kernel_size=17, padding_mode='circular', bias=False, init='zeros', kernel_norms=[], kernel_power=2, **kwargs):
         """ Constructor
 
         Parameters
@@ -92,7 +92,7 @@ class HeatArray(HeatProblem):
 
         parser = HeatProblem.add_model_specific_args(parent_parser, defaults)
         group = parser.add_argument_group("Heat equation by convolution array", "Options specific to this model")
-        group.add_argument('--kernel_size', type=int, nargs='+', required=True, help='Size of the kernel (nD)')
+        group.add_argument('--kernel_size', type=int, nargs='+', help='Size of the kernel (nD)')
         group.add_argument('--padding_mode', choices=['zeros', 'reflect', 'replicate', 'circular'], help="Padding mode for the convolution")
         group.add_argument('--bias', type=lambda s:bool(strtobool(s)), nargs='?', const=True, help="Add a bias to the convolution")
         group.add_argument('--init', choices=['zeros', 'random', 'solution'], help="Initialization of the convolution kernel")
@@ -109,7 +109,7 @@ if __name__ == "__main__":
         description="Model of the heat equation using an array as convolution kernel",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = Trainer.add_argparse_args(parser)
-    parser = HeatArray.add_model_specific_args(parser)
+    parser = HeatArray.add_model_specific_args(parser, HeatArray.defaults_from_config())
     args = parser.parse_args()
 
     # Model, training & fit

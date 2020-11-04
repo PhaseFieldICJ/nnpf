@@ -57,7 +57,7 @@ if __name__ == "__main__":
         description="Model of the reaction operator of the Allen-Cahn equation",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = Trainer.add_argparse_args(parser)
-    parser = Reaction.add_model_specific_args(parser)
+    parser = Reaction.add_model_specific_args(parser, Reaction.defaults_from_config())
     args = parser.parse_args()
 
     # Model, training & fit

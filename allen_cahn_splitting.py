@@ -89,7 +89,7 @@ class AllenCahnSplitting(AllenCahnProblem):
     def add_model_specific_args(parent_parser, defaults={}):
         parser = AllenCahnProblem.add_model_specific_args(parent_parser, defaults)
         group = parser.add_argument_group("Allen-Cahn equation using splitting", "Options specific to this model")
-        group.add_argument('checkpoints', type=str, nargs='+', help="Path to the model's checkpoint")
+        group.add_argument('checkpoints', type=str, nargs='*', help="Path to the model's checkpoint")
         group.set_defaults(**{**get_default_args(AllenCahnSplitting), **defaults})
         return parser
 
@@ -101,7 +101,7 @@ if __name__ == "__main__":
         description="Model of the Allen-Cahn equation using splitting",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = Trainer.add_argparse_args(parser)
-    parser = AllenCahnSplitting.add_model_specific_args(parser)
+    parser = AllenCahnSplitting.add_model_specific_args(parser, AllenCahnSplitting.defaults_from_config())
     args = parser.parse_args()
 
     # Model, training & fit
