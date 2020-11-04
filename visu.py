@@ -136,6 +136,29 @@ class DiffusionIsotropyShow:
         return after
 
 
+class ContourShow:
+    """ Show contours of a given field """
+    def __init__(self, data, levels, X=None, ax=None, fig=None, **kwargs):
+
+        if X is None:
+            def create_contour(data):
+                return self.ax.contour(data, levels, **kwargs)
+        else:
+            X = broadcast_all(*X)
+            def create_contour(data):
+                return self.ax.contour(X[0], X[1], data, levels, **kwargs)
+
+        self.ax, fig = get_axe_fig(ax, fig)
+        self.create_contour = create_contour
+        self.contours = self.create_contour(data)
+
+    def update(self, data):
+        for path_coll in self.contours.collections:
+            self.ax.collections.remove(path_coll)
+        self.contours = self.create_contour(data)
+
+
+
 def distance_to_img(shape_or_dist, X=None, scale=1., in_color=[0.6, 0.8, 1.0], out_color=[0.9, 0.6, 0.3]):
     """ Transform a 2D shape or distance function to an image
 
