@@ -241,7 +241,7 @@ class WillmoreProblem(Problem):
 
         # Metric calculation
         model_volume, exact_volume = self.check_sphere_volume()
-        volume_error = (model_volume - exact_volume).norm()
+        volume_error = ((model_volume - exact_volume) / exact_volume).norm() / model_volume.numel()
 
         return self.dispatch_metrics({'val_loss': avg_loss, 'metric': volume_error})
 
