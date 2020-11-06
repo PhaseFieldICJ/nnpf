@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-
+#!/usr/bin/env python3
 """
 Base module and utils for the Willmore equation learning problem
 """
@@ -361,7 +360,9 @@ if __name__ == "__main__":
     parser.add_argument("checkpoint", type=str, help="Path to the model's checkpoint")
     parser.add_argument("--no_save", action="store_true", help="Don't save the animation")
     parser.add_argument("--tol", type=float, default=1e-5, help="Tolerance used as a stop criteron")
-    parser.add_argument("--max_frames", type=int, default=-1, help="Maximum number of calculated frames (-1 for illimited)")
+    parser.add_argument("--max_it", type=int, default=-1, help="Maximum number of calculated iterations (-1 for illimited")
+    parser.add_argument("--max_frames", type=int, default=-1, help="Maximum number of rendered frames (-1 for illimited)")
+    parser.add_argument("--max_duration", type=float, default=-1, help="Maximum duration of the animation (-1 for illimited")
     parser.add_argument("--no_dist", action="store_true", help="Display phase field instead of distance")
     parser.add_argument("--scale", type=float, default=1., help="Initial shape scale")
     parser.add_argument("--shape", type=str, choices=["one", "two", "three"], default="one", help="Initial shape")
@@ -372,6 +373,9 @@ if __name__ == "__main__":
     parser.add_argument("--figsize", type=int, default=[6, 6], nargs=2, help="Figure size in inches")
 
     args = parser.parse_args()
+
+    if args.max_duration < 0.:
+        args.max_duration = float('inf')
 
     # Matplotlib rendering backend
     if args.offscreen:
@@ -435,7 +439,7 @@ if __name__ == "__main__":
             return pf.iprofil(u, model.hparams.epsilon).cpu()
         graph = visu.DistanceShow(data_from(u), scale=scale, extent=extent, interpolation=interpolation)
 
-    contour = visu.ContourShow(dist_sol(0.), [0.], X=model.domain.X)
+    contour = visu.ContourShow(dist_sol(0.).cpu(), [0.], X=[x.cpu() for x in model.domain.X])
 
     title = plt.title(f"t = 0 ; it = 0")
     plt.tight_layout()
@@ -449,13 +453,13 @@ if __name__ == "__main__":
         last_diff = [args.tol + 1] * 25
 
         with tqdm.tqdm() as pbar:
-            while max(last_diff) > args.tol and pbar.n != args.max_frames:
+            while max(last_diff) > args.tol and pbar.n != args.max_it and pbar.n != args.max_frames * args.display_step and pbar.n / args.display_step / args.fps < args.max_duration:
                 last_u = u.clone()
                 u = model(u[None, None, ...])[0, 0, ...]
 
                 if pbar.n % args.display_step == 0:
                     graph.update(data_from(u))
-                    contour.update(dist_sol(pbar.n * model.hparams.dt))
+                    contour.update(dist_sol(pbar.n * model.hparams.dt).cpu())
                     title.set_text(f"t = {pbar.n*model.hparams.dt:.5} ; it = {pbar.n}")
                     plt.pause(0.01)
 
@@ -469,6 +473,9 @@ if __name__ == "__main__":
                 pbar.set_postfix({
                     'volume': vol.item(),
                     'diff': last_diff[0],
-                    'max diff': max(last_diff)
+                    'max diff': max(last_diff),
+                    't': pbar.n * model.hparams.dt,
+                    'frames': pbar.n // args.display_step,
+                    'duration': pbar.n / args.display_step / args.fps,
                 })
 

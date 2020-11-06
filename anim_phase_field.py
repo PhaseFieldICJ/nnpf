@@ -14,7 +14,9 @@ import tqdm
 import math
 
 # Command-line arguments
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(
+    description="Shapes evolution using given model",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("checkpoint", type=str, help="Path to the model's checkpoint")
 parser.add_argument("--no_save", action="store_true", help="Don't save the animation")
 parser.add_argument("--tol", type=float, default=1e-5, help="Tolerance used as a stop criteron")
