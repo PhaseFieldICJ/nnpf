@@ -18,7 +18,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("checkpoint", type=str, help="Path to the model's checkpoint")
 parser.add_argument("--no_save", action="store_true", help="Don't save the animation")
 parser.add_argument("--tol", type=float, default=1e-5, help="Tolerance used as a stop criteron")
-parser.add_argument("--max_frames", type=int, default=-1, help="Maximum number of calculated frames (-1 for illimited)")
+parser.add_argument("--max_it", type=int, default=-1, help="Maximum number of calculated iterations (-1 for illimited")
+parser.add_argument("--max_frames", type=int, default=-1, help="Maximum number of rendered frames (-1 for illimited)")
+parser.add_argument("--max_duration", type=float, default=-1, help="Maximum duration of the animation (-1 for illimited")
 parser.add_argument("--no_dist", action="store_true", help="Display phase field instead of distance")
 parser.add_argument("--scale", type=float, default=1., help="Initial shape scale")
 parser.add_argument("--shape", type=str, choices=["bunch", "one", "two", "three", "mixed_one", "mixed_two"], default="bunch", help="Initial shape")
@@ -29,6 +31,9 @@ parser.add_argument("--fps", type=int, default=25, help="Frame per second in the
 parser.add_argument("--figsize", type=int, default=[6, 6], nargs=2, help="Figure size in inches")
 
 args = parser.parse_args()
+
+if args.max_duration < 0.:
+    args.max_duration = float('inf')
 
 # Matplotlib rendering backend
 if args.offscreen:
@@ -62,7 +67,7 @@ if args.shape == "bunch":
             shapes.union(
                 shapes.sphere(radius(0.3), pos([0.5, 0.5])),
                 shapes.sphere(radius(0.2), pos([0.7, 0.8])),
-                shapes.translation(shapes.box([radius(0.1), radius(0.08)]), pos([0.2, 0.2])),
+                shapes.translation(shapes.box([radius(0.2), radius(0.16)]), pos([0.2, 0.2])),
 
             ), pos([0., 0.2]))
 
@@ -138,7 +143,7 @@ with visu.AnimWriter('anim.avi', fps=args.fps, do_nothing=args.no_save) as anim:
     last_diff = [args.tol + 1] * 25
 
     with tqdm.tqdm() as pbar:
-        while max(last_diff) > args.tol and pbar.n != args.max_frames:
+        while max(last_diff) > args.tol and pbar.n != args.max_it and pbar.n != args.max_frames * args.display_step and pbar.n / args.display_step / args.fps < args.max_duration:
             last_u = u.clone()
             u = model(u[None, None, ...])[0, 0, ...]
 
@@ -157,5 +162,8 @@ with visu.AnimWriter('anim.avi', fps=args.fps, do_nothing=args.no_save) as anim:
             pbar.set_postfix({
                 'volume': vol.item(),
                 'diff': last_diff[0],
-                'max diff': max(last_diff)
+                'max diff': max(last_diff),
+                't': pbar.n * model.hparams.dt,
+                'frames': pbar.n // args.display_step,
+                'duration': pbar.n / args.display_step / args.fps,
             })
