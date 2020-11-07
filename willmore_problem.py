@@ -352,6 +352,7 @@ if __name__ == "__main__":
     import tqdm
     import math
     from functools import reduce
+    from distutils.util import strtobool
 
     # Command-line arguments
     parser = argparse.ArgumentParser(
@@ -371,6 +372,7 @@ if __name__ == "__main__":
     parser.add_argument("--display_step", type=int, default=1, help="Render frame every given number")
     parser.add_argument("--fps", type=int, default=25, help="Frame per second in the saved animation")
     parser.add_argument("--figsize", type=int, default=[6, 6], nargs=2, help="Figure size in inches")
+    parser.add_argument("--revert", type=lambda s:bool(strtobool(s)), nargs='?', const=True, default=False, help="Revert inside and outside of the phase")
 
     args = parser.parse_args()
 
@@ -422,6 +424,8 @@ if __name__ == "__main__":
 
     # Phase field
     u = pf.profil(s(*model.domain.X), model.hparams.epsilon)
+    if args.revert:
+        u = 1. - u
 
     # Graph
     scale = 0.25 * max(b[1] - b[0] for b, n in zip(model.domain.bounds, model.domain.N))
