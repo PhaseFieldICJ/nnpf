@@ -175,6 +175,15 @@ class WillmoreProblem(Problem):
             w * nn_toolbox.norm(error, p, dim).pow(self.hparams.loss_power)
             for p, w in self.hparams.loss_norms).mean() / torch.tensor(self.domain.N).prod()
 
+        # Below, loss with rescale depending on the solution normal (i.e. the circle size)
+        # The idea was to compensate the less importance of small circle in the final loss
+        # Need a lit more work on the scaling to work good
+        """
+        return sum(
+            w * (nn_toolbox.norm(error, p, dim) / nn_toolbox.norm(target, p, dim)).pow(self.hparams.loss_power)
+            for p, w in self.hparams.loss_norms).mean()
+        """
+
     def check_sphere_volume(self, radius=[0.1, 0.2, 0.3, 0.4], num_steps=100, center=None, progress_bar=False):
         """
         Check a Willmore model by measuring sphere volume decreasing
@@ -388,8 +397,10 @@ if __name__ == "__main__":
     if args.gpu:
         model.cuda()
 
+    domain = model.domain
+
     # Defining initial shape
-    bounds = model.domain.bounds
+    bounds = domain.bounds
     domain_extent = [b[1] - b[0] for b in bounds]
     domain_diameter = min(domain_extent)
 
@@ -399,8 +410,6 @@ if __name__ == "__main__":
     def pos(X, scale):
         #return [b[0] + (0.5 + scale * (x - 0.5)) * (b[1] - b[0]) for x, b in zip(X, bounds)]
         return [b[0] + x * (b[1] - b[0]) for x, b in zip(X, bounds)]
-
-    periodic_bounds = bounds.copy()
 
     # Shape
     if args.shape == "one":
@@ -413,17 +422,17 @@ if __name__ == "__main__":
         spheres = [(0.1, 0.2, 0.2), (0.2, 0.3, 0.7), (0.05, 0.7, 0.3)]
 
     s = shapes.union(*(shapes.sphere(radius(p[0], args.scale), pos(p[1:], args.scale)) for p in spheres))
-    dist_sol = lambda t: reduce(torch.min, [sphere_dist_MC(model.domain.X, radius(p[0], args.scale), t, pos(p[1:], args.scale)) for p in spheres])
+    dist_sol = lambda t: reduce(torch.min, [sphere_dist_MC(domain.X, radius(p[0], args.scale), t, pos(p[1:], args.scale)) for p in spheres])
 
     # Periodizing
-    s = shapes.periodic(s, periodic_bounds)
+    s = shapes.periodic(s, bounds)
 
     # Phase field
-    u = pf.profil(s(*model.domain.X), model.hparams.epsilon)
+    u = pf.profil(s(*domain.X), model.hparams.epsilon)
 
     # Graph
-    scale = 0.25 * max(b[1] - b[0] for b, n in zip(model.domain.bounds, model.domain.N))
-    extent = [*model.domain.bounds[0], *model.domain.bounds[1]]
+    scale = 0.25 * max(b[1] - b[0] for b, n in zip(domain.bounds, domain.N))
+    extent = [*domain.bounds[0], *domain.bounds[1]]
     interpolation = "kaiser"
 
     plt.figure(figsize=args.figsize)
@@ -437,7 +446,7 @@ if __name__ == "__main__":
             return pf.iprofil(u, model.hparams.epsilon).cpu()
         graph = visu.DistanceShow(data_from(u), scale=scale, extent=extent, interpolation=interpolation)
 
-    contour = visu.ContourShow(dist_sol(0.), [0.], X=model.domain.X)
+    contour = visu.ContourShow(dist_sol(0.).cpu(), [0.], X=[x.cpu() for x in domain.X], colors='red')
 
     title = plt.title(f"t = 0 ; it = 0")
     plt.tight_layout()
@@ -457,7 +466,7 @@ if __name__ == "__main__":
 
                 if pbar.n % args.display_step == 0:
                     graph.update(data_from(u))
-                    contour.update(dist_sol(pbar.n * model.hparams.dt))
+                    contour.update(dist_sol(pbar.n * model.hparams.dt).cpu())
                     title.set_text(f"t = {pbar.n*model.hparams.dt:.5} ; it = {pbar.n}")
                     plt.pause(0.01)
 
