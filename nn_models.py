@@ -31,73 +31,85 @@ class GaussActivation(Module):
         return torch.exp(-(x**2))
 
 
-class Parallel(Module):
+class Parallel(ModuleList):
     """ A parallel container.
 
-    Modules will be stacked in a parallel container, with a linear combination
-    of the outputs and an optional input broadcast factor.
+    Modules will be stacked in a parallel container, each module working
+    on a different channel (input's channel dimension is expanded if needed)
+    and outputing in the same channel.
 
     Parameters
     ----------
     modules: iterable
         The modules
-    input_factor: bool
-        True to add a scale factor of the input for each module
-    bias: bool
-        True to add the bias (input and ouput linear combination)
 
     Examples
     --------
-    >>> model = Parallel(Linear(2, 4), Linear(2, 4), Linear(2, 4))
+    >>> from torch.nn import Sequential
+
+    >>> model = Sequential(
+    ...     Parallel(Linear(2, 4), Linear(2, 4), Linear(2, 4)),
+    ...     LinearChannels(3, 1, bias=False))
     >>> data = torch.rand(10, 1, 2)
     >>> output = model(data)
-    >>> target = sum(model.output.weight[0, i] * module(data) for i, module in enumerate(model.list))
+    >>> target = sum(model[1].weight[0, i] * module(data) for i, module in enumerate(model[0]))
     >>> torch.allclose(output, target)
     True
 
-    >>> model = Parallel(Linear(2, 4), Linear(2, 4), Linear(2, 4), input_factor=True)
+    >>> model = Sequential(
+    ...     LinearChannels(1, 3, bias=False),
+    ...     Parallel(Linear(2, 4), Linear(2, 4), Linear(2, 4)),
+    ...     LinearChannels(3, 1, bias=False))
     >>> data = torch.rand(10, 1, 2)
     >>> output = model(data)
-    >>> target = sum(model.output.weight[0, i] * module(model.input.weight[i, 0] * data) for i, module in enumerate(model.list))
+    >>> target = sum(model[2].weight[0, i] * module(model[0].weight[i, 0] * data) for i, module in enumerate(model[1]))
     >>> torch.allclose(output, target)
     True
     """
-
-    def __init__(self, *modules, input_factor=False, bias=False):
-        super().__init__()
-        self.list = ModuleList(modules)
-        if input_factor:
-            self.input = Linear(1, len(self.list), bias=bias)
-        else:
-            self.input = None
-        self.output = Linear(len(self.list), 1, bias=bias)
-
-    def __len__(self):
-        return len(self.list)
-
-    def __getitem__(self, idx):
-        return self.list[idx]
-
-    def __setitem__(self, idx, module):
-        self.list[idx] = module
-
-    def __delitem__(self, idx):
-        del self.list[idx]
-
-    def __iter__(self):
-        return iter(self.list)
+    def __init__(self, *modules):
+        super().__init__(modules)
 
     def forward(self, data):
-        data = data.unsqueeze(-1)
-        if self.input is None:
-            data = data.expand(*data.shape[:-1], len(self.list))
-        else:
-            data = self.input(data)
+        """ Apply the model on data
 
-        data = torch.stack(
-            tuple(module(data[..., i]) for i, module in enumerate(self.list)),
-            dim=-1)
-        return self.output(data).squeeze(-1)
+        Parameters
+        ----------
+        data: Tensor of size (N, C, ...)
+            Input with a number of channels C equal to 1 or the number
+            of modules in this Parallel container.
+
+        Returns
+        -------
+        output: Tensor of size (N, M, ...)
+            Output with a number of channels M equal to the number of modules
+            in this Parallel container.
+        """
+        data = data.expand(data.shape[0], len(self), *data.shape[2:])
+        return torch.cat(
+            tuple(module(data[:, [i], ...]) for i, module in enumerate(self)),
+            dim=1)
+
+
+class LinearChannels(Linear):
+    """
+    Applies a linear transformation to the channels of the incoming data
+
+    Parameters
+    ----------
+    in_channels: int
+        number of input channels
+    out_channels: int
+        number of output channels
+    bias: bool
+        If set to False, the layer will not learn an additive bias. Default: True
+    """
+
+    def __init__(self, in_channels, out_channels, bias=True):
+        super().__init__(in_channels, out_channels, bias)
+
+    def forward(self, data):
+        perm = [0, -1] + list(range(2, data.ndim - 1)) + [1]
+        return super().forward(data.permute(*perm)).permute(*perm)
 
 
 class ConvolutionArray(_ConvNd):
