@@ -53,7 +53,7 @@ class WillmoreParallel(Problem):
         parallel = Parallel()
         for d in range(depth):
             module = Sequential()
-            for i, t in enumerate(scheme):
+            for i, t in enumerate(scheme * width):
                 if t == 'R':
                     module.add_module(str(i), Reaction(layer_dims, activation))
                 elif t == 'D':
