@@ -1,7 +1,7 @@
 """ Machine learning models """
 
 import torch
-from torch.nn import Module, ModuleList, Linear
+from torch.nn import Module, ModuleList, Linear, Sequential
 from torch.nn.modules.conv import _ConvNd
 
 import nn_toolbox
@@ -31,12 +31,14 @@ class GaussActivation(Module):
         return torch.exp(-(x**2))
 
 
-class Parallel(ModuleList):
+class Parallel(Sequential):
     """ A parallel container.
 
     Modules will be stacked in a parallel container, each module working
     on a different channel (input's channel dimension is expanded if needed)
     and outputing in the same channel.
+
+    Note: also see Sequential documentation for more construction capablities
 
     Parameters
     ----------
@@ -66,9 +68,6 @@ class Parallel(ModuleList):
     >>> torch.allclose(output, target)
     True
     """
-    def __init__(self, *modules):
-        super().__init__(modules)
-
     def forward(self, data):
         """ Apply the model on data
 
