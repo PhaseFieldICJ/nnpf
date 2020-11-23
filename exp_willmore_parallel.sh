@@ -51,10 +51,10 @@ done
 
 for i in $(seq "$N")
 do
-    depth=$((2 ** ($i - 1)))
-    width=$((2 ** ($N - $i)))
-    version="${version_prefix}${scheme}_d${depth}_w${width}"
-    args=("${remaining_args[@]}" --depth "$depth" --width "$width" --scheme "$scheme" --version "$version" --default_root_dir "$default_root_dir")
+    layer=$((2 ** ($i - 1)))
+    repeat=$((2 ** ($N - $i)))
+    version="${version_prefix}${scheme}_l${layer}_r${repeat}"
+    args=("${remaining_args[@]}" --scheme_layers "$layer" --scheme_repeat "$repeat" --scheme "$scheme" --version "$version" --default_root_dir "$default_root_dir")
     if [ "$resume" ]
     then
         args=("${args[@]}" --resume_from_checkpoint "${default_root_dir}/WillmoreParallel/${version}/checkpoints/last.ckpt")

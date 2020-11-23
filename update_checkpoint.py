@@ -52,10 +52,45 @@ def fix_allen_cahn_splitting(data):
     return data
 
 
+def fix_willmore_parallel(data):
+    """ Update hyperparameters of WillmoreParallel
+
+    init -> kernel_init
+    layer_dims -> reaction_layers
+    activation -> reaction_activation
+    depth -> scheme_layers
+    width -> scheme_repeat
+    """
+    if data.get('class_name') != 'WillmoreParallel':
+        return data
+
+    def rename_hparams(before, after, transformation=lambda v: v):
+        if before in data['hyper_parameters']:
+            data['hyper_parameters'][after] = transformation(data['hyper_parameters'].pop(before))
+
+    rename_hparams('init', 'kernel_init')
+    rename_hparams('layer_dims', 'reaction_layers')
+    rename_hparams('activation', 'reaction_activation')
+    rename_hparams('depth', 'scheme_layers', lambda v: [v])
+    rename_hparams('width', 'scheme_repeat')
+
+    def fix_field_name(name):
+        name = re.sub(r'\.parallel\.', r'.parallel0.', name)
+        return name
+
+    state_dict = OrderedDict()
+    for key, value in data['state_dict'].items():
+        state_dict[fix_field_name(key)] = value
+    data['state_dict'] = state_dict
+
+    return data
+
+
 def update_checkpoint_content(data):
     """ Update given checkpoint content """
     fix_convolution(data)
     fix_allen_cahn_splitting(data)
+    fix_willmore_parallel(data)
     return data
 
 

@@ -17,9 +17,9 @@ Problem = WillmoreProblem
 
 class WillmoreParallel(Problem):
 
-    def __init__(self, depth=4, width=1, scheme="DR", prefix="", suffix="",
-                 kernel_size=17, init='zeros',
-                 layer_dims=[8, 3], activation='GaussActivation',
+    def __init__(self, scheme="DR", scheme_layers=[4], scheme_repeat=1, prefix="", suffix="",
+                 kernel_size=17, kernel_init='zeros',
+                 reaction_layers=[8, 3], reaction_activation='GaussActivation',
                  input_linear=False, input_bias=False, # LinearChannels before the Parallel
                  output_linear=True, output_bias=True, # LinearChannels after the Parallel (needed if depth > 1)
                  **kwargs):
@@ -36,9 +36,9 @@ class WillmoreParallel(Problem):
             kernel_size = kernel_size * self.domain.dim
 
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('depth', 'width', 'scheme', 'prefix', 'suffix',
-                                  'kernel_size', 'init',
-                                  'layer_dims', 'activation',
+        self.save_hyperparameters('scheme', 'scheme_layers', 'scheme_repeat', 'prefix', 'suffix',
+                                  'kernel_size', 'kernel_init',
+                                  'reaction_layers', 'reaction_activation',
                                   'input_linear', 'input_bias',
                                   'output_linear', 'output_bias',)
 
@@ -48,9 +48,9 @@ class WillmoreParallel(Problem):
             module = Sequential()
             for i, t in enumerate(scheme):
                 if t == 'R':
-                    module.add_module(str(i), Reaction(layer_dims, activation))
+                    module.add_module(str(i), Reaction(reaction_layers, reaction_activation))
                 elif t == 'D':
-                    module.add_module(str(i), HeatArray(kernel_size=kernel_size, init=init,
+                    module.add_module(str(i), HeatArray(kernel_size=kernel_size, init=kernel_init,
                                                         bounds=self.hparams.bounds,
                                                         N=self.hparams.N,))
                 else:
@@ -66,17 +66,20 @@ class WillmoreParallel(Problem):
 
         # Input layer
         if input_linear:
-            self.model.add_module("input", LinearChannels(1, depth, bias=input_bias))
+            self.model.add_module("input", LinearChannels(1, scheme_layers[0], bias=input_bias))
 
-        # Parallel layer
-        parallel = Parallel()
-        for d in range(depth):
-            parallel.add_module(str(d), str_to_module(scheme * width))
-        self.model.add_module("parallel", parallel)
+        # Parallel layers
+        last_dim = None
+        for i, dim in enumerate(scheme_layers):
+            if last_dim is not None:
+                self.model.add_module(f"linear{i-1}", LinearChannels(last_dim, dim, bias=True))
+            parallel = Parallel(*[str_to_module(scheme * scheme_repeat) for _ in range(dim)])
+            self.model.add_module(f"parallel{i}", parallel)
+            last_dim = dim
 
         # Output layer
         if output_linear:
-            self.model.add_module("output", LinearChannels(depth, 1, bias=output_bias))
+            self.model.add_module("output", LinearChannels(last_dim, 1, bias=output_bias))
 
         # Suffix
         if suffix:
@@ -90,15 +93,15 @@ class WillmoreParallel(Problem):
 
         parser = Problem.add_model_specific_args(parent_parser, defaults)
         group = parser.add_argument_group("Willmore parallel", "Options specific to this model")
-        group.add_argument('--depth', type=int, help='Number of layers in the Parallel container')
-        group.add_argument('--width', type=int, help='Number of repetition of the scheme in each parallel layer')
         group.add_argument('--scheme', type=str, help='Base scheme (sequence of R & D)')
+        group.add_argument('--scheme_layers', type=int, nargs='+', help='Sizes of the hidden Parallel layers')
+        group.add_argument('--scheme_repeat', type=int, help='Number of repetition of the scheme in each parallel layer')
         group.add_argument('--prefix', type=str, help='Prefix scheme (sequence of R & D)')
         group.add_argument('--suffix', type=str, help='Suffix scheme (sequence of R & D)')
         group.add_argument('--kernel_size', type=int, nargs='+', help='Size of the kernel (nD)')
-        group.add_argument('--init', choices=['zeros', 'random'], help="Initialization of the convolution kernel")
-        group.add_argument('--layer_dims', type=int, nargs='+', help='Sizes of the hidden layers')
-        group.add_argument('--activation', type=str, help='Name of the activation function')
+        group.add_argument('--kernel_init', choices=['zeros', 'random'], help="Initialization of the convolution kernel")
+        group.add_argument('--reaction_layers', type=int, nargs='+', help='Sizes of the hidden layers')
+        group.add_argument('--reaction_activation', type=str, help='Name of the activation function')
         group.add_argument('--input_linear', type=lambda s: bool(strtobool(s)), nargs='?', const=True, help="Add a LinearChannel before the Parallel")
         group.add_argument('--input_bias', type=lambda s: bool(strtobool(s)), nargs='?', const=True, help="Add a bias in the input LinearChannel")
         group.add_argument('--output_linear', type=lambda s: bool(strtobool(s)), nargs='?', const=True, help="Add a LinearChannel after the Parallel")
