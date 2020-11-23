@@ -17,7 +17,7 @@ Problem = WillmoreProblem
 
 class WillmoreParallel(Problem):
 
-    def __init__(self, depth=4, width=1, scheme="DR",
+    def __init__(self, depth=4, width=1, scheme="DR", prefix="", suffix="",
                  kernel_size=17, init='zeros',
                  layer_dims=[8, 3], activation='GaussActivation',
                  input_linear=False, input_bias=False, # LinearChannels before the Parallel
@@ -36,24 +36,17 @@ class WillmoreParallel(Problem):
             kernel_size = kernel_size * self.domain.dim
 
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('depth', 'width', 'scheme',
+        self.save_hyperparameters('depth', 'width', 'scheme', 'prefix', 'suffix',
                                   'kernel_size', 'init',
                                   'layer_dims', 'activation',
                                   'input_linear', 'input_bias',
                                   'output_linear', 'output_bias',)
 
-        # Creating model
-        self.model = Sequential()
 
-        # Input layer
-        if input_linear:
-            self.model.add_module("input", LinearChannels(1, depth, bias=input_bias))
-
-        # Parallel layer
-        parallel = Parallel()
-        for d in range(depth):
+        # Helper function
+        def str_to_module(scheme):
             module = Sequential()
-            for i, t in enumerate(scheme * width):
+            for i, t in enumerate(scheme):
                 if t == 'R':
                     module.add_module(str(i), Reaction(layer_dims, activation))
                 elif t == 'D':
@@ -62,12 +55,32 @@ class WillmoreParallel(Problem):
                                                         N=self.hparams.N,))
                 else:
                     raise ValueError(f"Unknow module type {t} in scheme {scheme}")
-            parallel.add_module(str(d), module)
+            return module
+
+        # Creating model
+        self.model = Sequential()
+
+        # Prefix
+        if prefix:
+            self.model.add_module("prefix", str_to_module(prefix))
+
+        # Input layer
+        if input_linear:
+            self.model.add_module("input", LinearChannels(1, depth, bias=input_bias))
+
+        # Parallel layer
+        parallel = Parallel()
+        for d in range(depth):
+            parallel.add_module(str(d), str_to_module(scheme * width))
         self.model.add_module("parallel", parallel)
 
         # Output layer
         if output_linear:
             self.model.add_module("output", LinearChannels(depth, 1, bias=output_bias))
+
+        # Suffix
+        if suffix:
+            self.model.add_module("suffix", str_to_module(suffix))
 
     def forward(self, x):
         return self.model(x)
@@ -80,6 +93,8 @@ class WillmoreParallel(Problem):
         group.add_argument('--depth', type=int, help='Number of layers in the Parallel container')
         group.add_argument('--width', type=int, help='Number of repetition of the scheme in each parallel layer')
         group.add_argument('--scheme', type=str, help='Base scheme (sequence of R & D)')
+        group.add_argument('--prefix', type=str, help='Prefix scheme (sequence of R & D)')
+        group.add_argument('--suffix', type=str, help='Suffix scheme (sequence of R & D)')
         group.add_argument('--kernel_size', type=int, nargs='+', help='Size of the kernel (nD)')
         group.add_argument('--init', choices=['zeros', 'random'], help="Initialization of the convolution kernel")
         group.add_argument('--layer_dims', type=int, nargs='+', help='Sizes of the hidden layers')
