@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
-# Script that tests different possibilities of depth/width of exp_willmore_parallel with constant number of repeatition
+# Script that tests different possibilities of depth/width of exp_willmore_parallel with constant number of repetition
 
-N="$1"
+N="$1" # 2^N max repetitions
 shift
 
 script="exp_willmore_parallel.py"
 remaining_args=()
 scheme=DR
-version_prefix=
+version_suffix=
 dry_run=
 default_root_dir="exp_willmore_parallel"
 resume=
@@ -23,7 +23,7 @@ do
             ;;
 
         --version)
-            version_prefix="$2_"
+            version_suffix="_$2"
             shift 2
             ;;
 
@@ -49,11 +49,11 @@ do
     esac
 done
 
-for i in $(seq "$N")
+for i in $(seq 0 "$N")
 do
-    layer=$((2 ** ($i - 1)))
-    repeat=$((2 ** ($N - $i)))
-    version="${version_prefix}${scheme}_l${layer}_r${repeat}"
+    layer=$((2 ** ($N - i)))
+    repeat=$((2 ** $i))
+    version="${scheme}_l${layer}_r${repeat}${version_suffix}"
     args=("${remaining_args[@]}" --scheme_layers "$layer" --scheme_repeat "$repeat" --scheme "$scheme" --version "$version" --default_root_dir "$default_root_dir")
     if [ "$resume" ]
     then
