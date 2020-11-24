@@ -18,6 +18,16 @@ conda env create -f environment_gpu.yml
 conda activate nnpf_gpu
 ```
 
+To **update** instead an already created environement:
+```bash
+conda env update -f environment_cpu.yml
+```
+and/or
+```bash
+conda env update -f environment_gpu.yml
+```
+depending on which environment you already have.
+
 **Test** the installation with:
 ```bash
 python3 self_test.py
