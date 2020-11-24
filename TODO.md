@@ -5,7 +5,6 @@
 - decorator for `forward` method that detect numpy input, disable grad & reshape? See also reshape in ReactionProblem
 - diff, `total_variation_norm`, norm in another module?
 - consistant way of specifying domain bounds, kernel size, ... in the command-line (e.g. [0,1]x[0,1], 15x15, maybe event [0,1]³ or [0,1]^3 ?!)
-- replace isabstract in `load_from_checkpoint` by a comparison of class path & name (to allow deriving from a complete model)
 - more shapes and operations, fix elongate, express everything from basic shape + op (sphere <=> rounded dot, rectangle <=> elongated dot, ...)
 - `batch_size`, `batch_shuffle`, `lr`, `train_N`, `val_N` and dataloader method in Problem?
 - dataset generation and loss calculation on multiple steps in a dedicated class (eg EvolutionProblem)?

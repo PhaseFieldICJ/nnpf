@@ -244,18 +244,16 @@ class Problem(pl.LightningModule):
     @classmethod
     def load_from_checkpoint(cls, checkpoint_path, *args, map_location=None, **kwargs):
         """ Load model from checkpoint with automatic model forward """
-        import inspect
+        import torch
 
         # If path if a folder, found last checkpoint from checkpoints subfolder
         checkpoint_path = checkpoint_from_path(checkpoint_path)
 
-        # Forward to the right class if current class is abstract
-        if inspect.isabstract(cls):
-            import importlib.util
-            import torch
-            checkpoint = torch.load(checkpoint_path, map_location=map_location)
-
+        # Forward to the right class if current class's name doesn't match
+        checkpoint = torch.load(checkpoint_path, map_location=map_location)
+        if cls.__name__ != checkpoint["class_name"]:
             # From https://stackoverflow.com/a/67692
+            import importlib.util
             spec = importlib.util.spec_from_file_location("model", fix_path(checkpoint["class_path"]))
             foo = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(foo)
