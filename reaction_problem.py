@@ -53,7 +53,7 @@ class ReactionProblem(Problem):
     Features the train and validation data.
     """
 
-    def __init__(self, epsilon=2/2**8, dt=None, margin=0.1, Ntrain=100, Nval=None, batch_size=None, lr=1e-3, **kwargs):
+    def __init__(self, epsilon=2/2**8, dt=None, margin=0.1, Ntrain=100, Nval=None, batch_size=10, batch_shuffle=True, lr=1e-3, **kwargs):
         """ Constructor
 
         Parameters
@@ -81,7 +81,7 @@ class ReactionProblem(Problem):
         Nval = Nval or 10 * Ntrain
 
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('dt', 'epsilon', 'margin', 'Ntrain', 'Nval', 'batch_size', 'lr')
+        self.save_hyperparameters('dt', 'epsilon', 'margin', 'Ntrain', 'Nval', 'batch_size', 'batch_shuffle', 'lr')
 
     def loss(self, output, target):
         """ Default loss function """
@@ -117,7 +117,7 @@ class ReactionProblem(Problem):
 
     def train_dataloader(self):
         """ Returns the training data loader """
-        return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size or len(self.train_dataset))
+        return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size or len(self.train_dataset), shuffle=self.hparams.batch_shuffle)
 
     def val_dataloader(self):
         """ Returns the validation data loader """
@@ -137,6 +137,7 @@ class ReactionProblem(Problem):
 
     @staticmethod
     def add_model_specific_args(parent_parser, defaults={}):
+        from distutils.util import strtobool
         parser = Problem.add_model_specific_args(parent_parser, defaults)
         group = parser.add_argument_group("Reaction problem", "Options common to all models of the reaction term.")
         group.add_argument('--epsilon', type=float, help="Interface sharpness")
@@ -145,6 +146,7 @@ class ReactionProblem(Problem):
         group.add_argument('--Ntrain', type=int, help="Size of the training dataset")
         group.add_argument('--Nval', type=int, help="Size of the validation dataset (10*Ntrain if None)")
         group.add_argument('--batch_size', type=int, help="Size of batch")
+        group.add_argument('--batch_shuffle', type=lambda v: bool(strtobool(v)), nargs='?', const=True, help="Shuffle batch")
         group.add_argument('--lr', type=float, help="Learning rate")
         group.set_defaults(**{**get_default_args(ReactionProblem), **defaults})
         return parser

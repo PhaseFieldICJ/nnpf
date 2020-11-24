@@ -108,7 +108,7 @@ class WillmoreProblem(Problem):
     """
 
     def __init__(self, bounds=[[0., 1.], [0., 1.]], N=256, epsilon=2/256, dt=None,
-                 batch_size=10, batch_shuffle=1, lr=1e-4,
+                 batch_size=10, batch_shuffle=True, lr=1e-4,
                  loss_norms=None, loss_power=2.,
                  radius=[0.05, 0.45], lp=2,
                  train_N=100, train_steps=1, val_N=200, val_steps=5,
@@ -324,6 +324,8 @@ class WillmoreProblem(Problem):
             except ValueError:
                 return float(v)
 
+        from distutils.util import strtobool
+
         parser = Problem.add_model_specific_args(parent_parser, defaults)
         group = parser.add_argument_group("Willmore problem", "Options common to all models of Willmore equation.")
         group.add_argument('--bounds', type=bounds_parser, default=[[0., 1.],[0., 1.]], help="Domain bounds in format like '[0, 1]x[1, 2.5]'")
@@ -337,7 +339,7 @@ class WillmoreProblem(Problem):
         group.add_argument('--radius', type=float, nargs=2, default=[0.05, 0.45], help="Bounds on sphere radius (ratio of domain bounds) used for training and validation dataset.")
         group.add_argument('--lp', type=int_or_float, default=2, help="Power of the lp-norm used to define the spheres for training and validation dataset.")
         group.add_argument('--batch_size', type=int, default=10, help="Size of batch")
-        group.add_argument('--batch_shuffle', type=lambda v: bool(int(v)), default=True, help="Shuffle batch (1 to activate)")
+        group.add_argument('--batch_shuffle', type=lambda v: bool(strtobool(v)), nargs='?', const=True, help="Shuffle batch")
         group.add_argument('--lr', type=float, default=1e-3, help="Learning rate")
         group.add_argument('--loss_norms', type=float_or_str, nargs=2, action='append', help="List of (p, weight). Compose loss as sum of weight * (output - target).norm(p).pow(e). Default to l2 norm. Exponent e is defined with loss_power parameter.")
         group.add_argument('--loss_power', type=float, default=2., help="Power applied to each loss term (for regularization purpose)")

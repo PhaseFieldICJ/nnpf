@@ -230,7 +230,7 @@ class HeatProblem(Problem):
     """
 
     def __init__(self, bounds=[[0., 1.], [0., 1.]], N=256, dt=(2 / 256)**2,
-                 batch_size=None, batch_shuffle=False, lr=1e-3, loss_norms=None, loss_power=2.,
+                 batch_size=10, batch_shuffle=True, lr=1e-3, loss_norms=None, loss_power=2.,
                  train_N=100, train_radius=[0, 0.25], train_epsilon=[0, 0.1], train_num_shapes=1, train_steps=10,
                  val_N=100, val_radius=[0, 0.35], val_epsilon=[0, 0.2], val_num_shapes=[1, 3], val_steps=10,
                  **kwargs):
@@ -371,6 +371,8 @@ class HeatProblem(Problem):
                 bounds.append([float(b) for b in match.group(1).split(',')])
             return bounds
 
+        from distutils.util import strtobool
+
         # Parser for loss definition
         def float_or_str(v):
             try:
@@ -388,7 +390,7 @@ class HeatProblem(Problem):
         group.add_argument('--train_steps', type=int, help="Number of evolution steps in the training dataset")
         group.add_argument('--val_steps', type=int, help="Number of evolution steps in the validation dataset")
         group.add_argument('--batch_size', type=int, help="Size of batch")
-        group.add_argument('--batch_shuffle', type=lambda v: bool(int(v)), help="Shuffle batch (1 to activate)")
+        group.add_argument('--batch_shuffle', type=lambda v: bool(strtobool(v)), nargs='?', const=True, help="Shuffle batch")
         group.add_argument('--lr', type=float, help="Learning rate")
         group.add_argument('--loss_norms', type=float_or_str, nargs=2, action='append', help="List of (p, weight). Compose loss as sum of weight * (output - target).norm(p).pow(e). Default to l2 norm. Exponent e is defined with loss_power parameter.")
         group.add_argument('--loss_power', type=float, help="Power applied to each loss term (for regularization purpose)")
