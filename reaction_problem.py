@@ -51,28 +51,26 @@ class ReactionProblem(Problem):
     Base class for the Allen-Cahn reaction term learning problem
 
     Features the train and validation data.
+
+    Parameters
+    ----------
+    epsilon: float
+        Interface sharpness in phase field model
+    dt: float
+        Time step. epsilon**2 if None.
+    margin: float
+        Expanding length of the sampled [0, 1] interval
+    Ntrain: int
+        Number of samples for the training step
+    Nval: int
+        Number of samples for the validation step. 10*Ntrain if None.
+    batch_size: int
+        Size of the batch during training and validation steps. Full data if None.
+    lr: float
+        Learning rate of the optimizer
     """
 
     def __init__(self, epsilon=2/2**8, dt=None, margin=0.1, Ntrain=100, Nval=None, batch_size=10, batch_shuffle=True, lr=1e-3, **kwargs):
-        """ Constructor
-
-        Parameters
-        ----------
-        epsilon: float
-            Interface sharpness in phase field model
-        dt: float
-            Time step. epsilon**2 if None.
-        margin: float
-            Expanding length of the sampled [0, 1] interval
-        Ntrain: int
-            Number of samples for the training step
-        Nval: int
-            Number of samples for the validation step. 10*Ntrain if None.
-        batch_size: int
-            Size of the batch during training and validation steps. Full data if None.
-        lr: float
-            Learning rate of the optimizer
-        """
 
         super().__init__(**kwargs)
 

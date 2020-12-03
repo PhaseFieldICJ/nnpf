@@ -104,6 +104,39 @@ class AllenCahnProblem(Problem):
     Base class for the Allen-Cahn equation problem
 
     Features the train and validation data, and the metric.
+
+    Parameters
+    ----------
+    bounds: iterable of pairs of float
+        Bounds of the domain
+    N: int or iterable of int
+        Number of discretization points
+    epsilon: float
+        Interface sharpness in phase field model
+    dt: float
+        Time step. epsilon**2 if None.
+    batch_size: int
+        Size of the batch during training and validation steps. Full data if None.
+    batch_shuffle: bool
+        Shuffle batch content.
+    lr: float
+        Learning rate of the optimizer
+    loss_norms: list of pair (p, weight)
+        Compose loss as sum of weight * (output - target).norm(p).pow(e).
+        Default to l2 norm.
+        Exponent e is defined with loss_power parameter.
+    loss_power: float
+        Power applied to each loss term (for regularization purpose).
+    radius: list of 2 floats
+        Bounds on sphere radius (ratio of domain bounds) used for training and validation datasets.
+    lp: int or float
+        Power of the lp-norm used to defined the spheres in training and validation datasets.
+    train_N, val_N: int
+        Size of the training and validation datasets
+    train_steps, val_steps: int
+        Number of evolution step applied to each input
+    kwargs: dict
+        Parameters passed to Problem (see doc)
     """
 
     def __init__(self, bounds=[[0., 1.], [0., 1.]], N=256, epsilon=2/256, dt=None,
@@ -112,41 +145,6 @@ class AllenCahnProblem(Problem):
                  radius=[0.05, 0.45], lp=2,
                  train_N=100, train_steps=1, val_N=200, val_steps=5,
                  **kwargs):
-        """ Constructor
-
-        Parameters
-        ----------
-        bounds: iterable of pairs of float
-            Bounds of the domain
-        N: int or iterable of int
-            Number of discretization points
-        epsilon: float
-            Interface sharpness in phase field model
-        dt: float
-            Time step. epsilon**2 if None.
-        batch_size: int
-            Size of the batch during training and validation steps. Full data if None.
-        batch_shuffle: bool
-            Shuffle batch content.
-        lr: float
-            Learning rate of the optimizer
-        loss_norms: list of pair (p, weight)
-            Compose loss as sum of weight * (output - target).norm(p).pow(e).
-            Default to l2 norm.
-            Exponent e is defined with loss_power parameter.
-        loss_power: float
-            Power applied to each loss term (for regularization purpose).
-        radius: list of 2 floats
-            Bounds on sphere radius (ratio of domain bounds) used for training and validation datasets.
-        lp: int or float
-            Power of the lp-norm used to defined the spheres in training and validation datasets.
-        train_N, val_N: int
-            Size of the training and validation datasets
-        train_steps, val_steps: int
-            Number of evolution step applied to each input
-        kwargs: dict
-            Parameters passed to Problem (see doc)
-        """
 
         super().__init__(**kwargs)
 
@@ -232,7 +230,7 @@ class AllenCahnProblem(Problem):
         model_volume, exact_volume = self.check_sphere_volume()
         volume_error = self.hparams.dt * (model_volume - exact_volume).norm()
 
-        return self.dispatch_metrics({'val_loss': avg_loss, 'metric': volume_error})
+        self.dispatch_metrics({'val_loss': avg_loss, 'metric': volume_error})
 
     def configure_optimizers(self):
         """ Default optimizer """

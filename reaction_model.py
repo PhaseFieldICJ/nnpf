@@ -13,20 +13,40 @@ from trainer import Trainer
 import argparse
 
 class Reaction(ReactionProblem):
+    """
+    Reaction problem model using a Multiple Layer Percerptron
+
+    Parameters
+    ----------
+    layer_dims: iterable of int
+        Working dimensions of the hidden layers
+    activation: str
+        Name of the activation function class
+    kwargs: dict
+        Parameters passed to reaction_problem.ReactionProblem
+
+    Examples
+    --------
+
+    Training:
+    >>> from trainer import Trainer
+    >>> trainer = Trainer(default_root_dir="logs_doctest", name="Reaction", version="test0", max_epochs=1)
+    >>> model = Reaction(train_N=10, val_N=20)
+    >>> import contextlib, io
+    >>> with contextlib.redirect_stdout(io.StringIO()):
+    ...     with contextlib.redirect_stderr(io.StringIO()):
+    ...         trainer.fit(model)
+    >>> trainer.global_step > 0
+    True
+
+    Loading from checkpoint:
+    >>> from problem import Problem
+    >>> model = Problem.load_from_checkpoint("logs_doctest/Reaction/test0/")
+    >>> type(model).__name__
+    'Reaction'
+    """
 
     def __init__(self, layer_dims=[8, 3], activation='GaussActivation', **kwargs):
-        """ Constructor
-
-        Parameters
-        ----------
-        layer_dims: iterable of int
-            Working dimensions of the hidden layers
-        activation: str
-            Name of the activation function class
-        kwargs: dict
-            Parameters passed to reaction_problem.ReactionProblem
-        """
-
         super().__init__(**kwargs)
 
         # Hyper-parameters (used for saving/loading the module)
@@ -56,13 +76,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Model of the reaction operator of the Allen-Cahn equation",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser = Trainer.add_argparse_args(parser)
+    parser = Trainer.add_argparse_args(parser, dict(name="Reaction"))
     parser = Reaction.add_model_specific_args(parser, Reaction.defaults_from_config())
     args = parser.parse_args()
 
     # Model, training & fit
     model = Reaction(**vars(args))
-    trainer = Trainer.from_argparse_args(args, "Reaction")
+    trainer = Trainer.from_argparse_args(args)
     trainer.fit(model)
 
 

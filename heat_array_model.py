@@ -13,29 +13,49 @@ from trainer import Trainer
 import argparse
 
 class HeatArray(HeatProblem):
+    """
+    Heat problem model using a discretized kernel.
+
+    Parameters
+    ----------
+    kernel_size: int or list
+        Size of the convolution kernel (a list for 2D and 3D convolutions)
+    padding_mode: string
+        'zeros', 'reflect', 'replicate' or 'circular'
+    bias: bool
+        If True, adds a learnable bias to the output.
+    init: ['zeros', 'random', 'solution']
+        Initialization of the convolution kernel:
+        - 'random' for the default from PyTorch.
+        - 'zeros' for zero-initialization.
+        - 'solution' to initialize with the truncated heat kernel.
+    kernel_norms: list of pair (p, weight)
+        Compose kernel penalization term as sum of weight * kernel.norm(p).exp(e). Exponent e is defined with kernel_power parameter.
+    kernel_power: int
+        Power applied to the kernel penalization term (for regularization purpose).
+
+    Examples
+    --------
+
+    Training:
+    >>> from trainer import Trainer
+    >>> trainer = Trainer(default_root_dir="logs_doctest", name="HeatArray", version="test0", max_epochs=1)
+    >>> model = HeatArray(train_N=10, val_N=20)
+    >>> import contextlib, io
+    >>> with contextlib.redirect_stdout(io.StringIO()):
+    ...     with contextlib.redirect_stderr(io.StringIO()):
+    ...         trainer.fit(model)
+    >>> trainer.global_step > 0
+    True
+
+    Loading from checkpoint:
+    >>> from problem import Problem
+    >>> model = Problem.load_from_checkpoint("logs_doctest/HeatArray/test0/")
+    >>> type(model).__name__
+    'HeatArray'
+    """
 
     def __init__(self, kernel_size=17, padding_mode='circular', bias=False, init='zeros', kernel_norms=[], kernel_power=2, **kwargs):
-        """ Constructor
-
-        Parameters
-        ----------
-        kernel_size: int or list
-            Size of the convolution kernel (a list for 2D and 3D convolutions)
-        padding_mode: string
-            'zeros', 'reflect', 'replicate' or 'circular'
-        bias: bool
-            If True, adds a learnable bias to the output.
-        init: ['zeros', 'random', 'solution']
-            Initialization of the convolution kernel:
-            - 'random' for the default from PyTorch.
-            - 'zeros' for zero-initialization.
-            - 'solution' to initialize with the truncated heat kernel.
-        kernel_norms: list of pair (p, weight)
-            Compose kernel penalization term as sum of weight * kernel.norm(p).exp(e). Exponent e is defined with kernel_power parameter.
-        kernel_power: int
-            Power applied to the kernel penalization term (for regularization purpose).
-        """
-
         super().__init__(**kwargs)
 
         # Fix kernel size to match domain dimension
@@ -108,13 +128,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Model of the heat equation using an array as convolution kernel",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser = Trainer.add_argparse_args(parser)
+    parser = Trainer.add_argparse_args(parser, dict(name="HeatArray"))
     parser = HeatArray.add_model_specific_args(parser, HeatArray.defaults_from_config())
     args = parser.parse_args()
 
     # Model, training & fit
     model = HeatArray(**vars(args))
-    trainer = Trainer.from_argparse_args(args, "HeatArray")
+    trainer = Trainer.from_argparse_args(args)
     trainer.fit(model)
 
 

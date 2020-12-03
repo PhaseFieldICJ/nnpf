@@ -11,17 +11,36 @@ from reaction_problem import ReactionProblem
 from trainer import Trainer
 
 class AllenCahnSplitting(AllenCahnProblem):
+    """
+    Allen-Cahn problem model based on checkpoints of heat and reaction models.
+
+    Parameters
+    ----------
+    checkpoints: list of str
+        Paths to the model's checkpoints of the operators
+
+    Examples
+    --------
+
+    After launching examples from heat_array_model and reaction_model:
+    >>> from trainer import Trainer
+    >>> trainer = Trainer(default_root_dir="logs_doctest", name="AllenCahnSplitting", version="test0", max_epochs=1)
+    >>> model = AllenCahnSplitting(['logs_doctest/HeatArray/test0', 'logs_doctest/Reaction/test0'], test_N=10, val_N=20)
+    >>> import contextlib, io
+    >>> with contextlib.redirect_stdout(io.StringIO()):
+    ...     with contextlib.redirect_stderr(io.StringIO()):
+    ...         trainer.fit(model)
+    >>> trainer.global_step > 0
+    True
+
+    Loading from checkpoint:
+    >>> from problem import Problem
+    >>> model = Problem.load_from_checkpoint("logs_doctest/AllenCahnSplitting/test0")
+    >>> type(model).__name__
+    'AllenCahnSplitting'
+    """
 
     def __init__(self, checkpoints, **kwargs):
-        """
-        Constructor
-
-        Parameters
-        ----------
-        checkpoints: list of str
-            Paths to the model's checkpoints of the operators
-        """
-
         # Loading operators and checking consistency
         operators = ModuleList()
         epsilon = None
@@ -100,13 +119,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Model of the Allen-Cahn equation using splitting",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser = Trainer.add_argparse_args(parser)
+    parser = Trainer.add_argparse_args(parser, dict(name="AllenCahnSplitting"))
     parser = AllenCahnSplitting.add_model_specific_args(parser, AllenCahnSplitting.defaults_from_config())
     args = parser.parse_args()
 
     # Model, training & fit
     model = AllenCahnSplitting(**vars(args))
-    trainer = Trainer.from_argparse_args(args, "AllenCahnSplitting")
+    trainer = Trainer.from_argparse_args(args)
     trainer.fit(model)
 
 

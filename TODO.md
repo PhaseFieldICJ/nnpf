@@ -1,6 +1,5 @@
 - add resulting images to log ?
 - CHECK Convolution classes & add `flat_meshgrid`
-- launch script from hyper parameters YAML file
 - tools to visualize dataset
 - decorator for `forward` method that detect numpy input, disable grad & reshape? See also reshape in ReactionProblem
 - diff, `total_variation_norm`, norm in another module?
@@ -10,7 +9,6 @@
 - dataset generation and loss calculation on multiple steps in a dedicated class (eg EvolutionProblem)?
 - 64 bits precision support (see https://github.com/PyTorchLightning/pytorch-lightning/issues/2497)
 - adding dtype in every possible class (eg Domain)
-- possibility to reload a model from a checkpoint and continue training. With possible different learning rate? With different version name (do track history of the training)?
 - optimization, speed and memory footprint, eg: dataset generated on the fly instead of fully stored, using broadcasting in domain.X and K, lazy expression using Keops, TorchScript, ...
 - load checkpoint from GPU to CPU (use `map_location` or always save to cpu?)
 - investigate high cpu load (eg on cluster24-math)
@@ -21,4 +19,9 @@
 - faster fftconv with padding != 'circular' using `scipy.fftpack.next_fast_len`
 - base class for Allen-Cahn and Willmore problem
 - training and validation dataset in dedicated class (using LightningDataModule)
-
+- reload hyperparameters when reloading from checkpoint ?
+- dedicated module
+- remove utils functions from trainer
+- epoch=#-v#.ckpt ?! (collide with auto saving initial state in trainer.Trainer)
+- common animation script or functions
+- animation features for `allen_cahn_problem`

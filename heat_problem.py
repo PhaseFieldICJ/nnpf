@@ -227,6 +227,33 @@ class HeatProblem(Problem):
     Base class for the heat equation learning problem
 
     Features the train and validation data.
+
+    Parameters
+    ----------
+    bounds: iterable of pairs of float
+        Bounds of the domain
+    N: int or iterable of int
+        Number of discretization points
+    dt: float
+        Time step.
+    margin: float
+        Expanding length of the sampled [0, 1] interval
+    train_N: int
+        Number of samples for the training step
+    val_N: int
+        Number of samples for the validation step. 10*Ntrain if None.
+    batch_size: int
+        Size of the batch during training and validation steps. Full data if None.
+    batch_shuffle: bool
+        Shuffle batch content.
+    lr: float
+        Learning rate of the optimizer
+    loss_norms: list of pair (p, weight)
+        Compose loss as sum of weight * (output - target).norm(p).pow(e).
+        Default to l2 norm.
+        Exponent e is defined with loss_power parameter.
+    loss_power: float
+        Power applied to each loss term (for regularization purpose).
     """
 
     def __init__(self, bounds=[[0., 1.], [0., 1.]], N=256, dt=(2 / 256)**2,
@@ -234,35 +261,6 @@ class HeatProblem(Problem):
                  train_N=100, train_radius=[0, 0.25], train_epsilon=[0, 0.1], train_num_shapes=1, train_steps=10,
                  val_N=100, val_radius=[0, 0.35], val_epsilon=[0, 0.2], val_num_shapes=[1, 3], val_steps=10,
                  **kwargs):
-        """ Constructor
-
-        Parameters
-        ----------
-        bounds: iterable of pairs of float
-            Bounds of the domain
-        N: int or iterable of int
-            Number of discretization points
-        dt: float
-            Time step.
-        margin: float
-            Expanding length of the sampled [0, 1] interval
-        train_N: int
-            Number of samples for the training step
-        val_N: int
-            Number of samples for the validation step. 10*Ntrain if None.
-        batch_size: int
-            Size of the batch during training and validation steps. Full data if None.
-        batch_shuffle: bool
-            Shuffle batch content.
-        lr: float
-            Learning rate of the optimizer
-        loss_norms: list of pair (p, weight)
-            Compose loss as sum of weight * (output - target).norm(p).pow(e).
-            Default to l2 norm.
-            Exponent e is defined with loss_power parameter.
-        loss_power: float
-            Power applied to each loss term (for regularization purpose).
-        """
 
         super().__init__(**kwargs)
 

@@ -25,18 +25,21 @@ modules = [
 failure_count, test_count = 0, 0
 
 for mod_name in modules:
+    print("#" * 80)
     module = importlib.import_module(mod_name)
     curr_failure_count, curr_test_count = doctest.testmod(module)
     failure_count += curr_failure_count
     test_count += curr_test_count
 
     if curr_test_count == 0:
-        print(f"{mod_name}: No test")
+        print(f"-> {mod_name}: No test")
     else:
         if curr_failure_count == 0:
-            print(f"{mod_name}: {curr_test_count} tests passed successfully")
+            print(f"-> {mod_name}: {curr_test_count} tests passed successfully")
         else:
-            print(f"{mod_name}: /!\ {curr_failure_count}/{curr_test_count} tests fail")
+            print(f"-> {mod_name}: /!\ {curr_failure_count}/{curr_test_count} tests fail")
+
+    print()
 
 print()
 

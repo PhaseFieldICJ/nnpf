@@ -14,7 +14,35 @@ def display_model_infos(model_or_path, recursive=True):
         The model or the path to a checkpoint
     recursive: bool
         If True, search for checkpoint in the hyper-parameters and display associated infos.
+
+    Examples
+    --------
+    >>> display_model_infos("logs_doctest/Reaction/test0")
+    <BLANKLINE>
+    Model summary:
+        class: Reaction
+        problem: ReactionProblem
+        ndof: 47
+        checkpoint path: logs_doctest/Reaction/test0/checkpoints/epoch=0.ckpt
+        epochs: 1
+        steps: 1
+        best score: 0
+        best path: 
+    <BLANKLINE>
+    Model hyper parameters:
+        seed: None
+        dt: 6.103515625e-05
+        epsilon: 0.0078125
+        margin: 0.1
+        Ntrain: 100
+        Nval: 1000
+        batch_size: 10
+        batch_shuffle: True
+        lr: 0.001
+        layer_dims: [8, 3]
+        activation: GaussActivation
     """
+
     import nn_toolbox
     import problem
     import inspect

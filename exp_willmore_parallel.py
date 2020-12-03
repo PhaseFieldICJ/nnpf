@@ -16,6 +16,29 @@ from torch.nn import Sequential
 Problem = WillmoreProblem
 
 class WillmoreParallel(Problem):
+    """
+    Experimental class for modeling the Willmore problem using parallel stack of base schemes
+
+    Examples
+    --------
+
+    Training:
+    >>> from trainer import Trainer
+    >>> trainer = Trainer(default_root_dir="logs_doctest", name="WillmoreParallel", version="test0", max_epochs=1)
+    >>> model = WillmoreParallel(N=64, train_N=10, val_N=20)
+    >>> import contextlib, io
+    >>> with contextlib.redirect_stdout(io.StringIO()):
+    ...     with contextlib.redirect_stderr(io.StringIO()):
+    ...         trainer.fit(model)
+    >>> trainer.global_step > 0
+    True
+
+    Loading from checkpoint:
+    >>> from problem import Problem
+    >>> model = Problem.load_from_checkpoint("logs_doctest/WillmoreParallel/test0/")
+    >>> type(model).__name__
+    'WillmoreParallel'
+    """
 
     def __init__(self, scheme="DR", scheme_layers=[4], scheme_repeat=1, prefix="", suffix="",
                  kernel_size=17, kernel_init='zeros',
@@ -116,12 +139,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Model of the Willmore equation using parallel stack of repeated sequences of given scheme",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser = Trainer.add_argparse_args(parser)
+    parser = Trainer.add_argparse_args(parser, dict(name="WillmoreParallel"))
     parser = WillmoreParallel.add_model_specific_args(parser, WillmoreParallel.defaults_from_config())
     args = parser.parse_args()
 
     # Model, training & fit
     model = WillmoreParallel(**vars(args))
-    trainer = Trainer.from_argparse_args(args, "WillmoreParallel")
+    trainer = Trainer.from_argparse_args(args)
     trainer.fit(model)
 
