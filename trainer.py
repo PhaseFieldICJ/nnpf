@@ -276,14 +276,18 @@ class Trainer(pl.Trainer):
 
         # Checkpointer
         if kwargs.get('checkpoint_callback', True) is True:
-            kwargs['checkpoint_callback'] = ModelCheckpoint(
+            kwargs.setdefault('callbacks', [])
+            if kwargs['callbacks'] is None:
+                kwargs['callbacks'] = []
+
+            kwargs['callbacks'].append(ModelCheckpoint(
                 filepath=None,
                 monitor='hp_metric',
                 save_top_k=1,
                 mode='min',
                 period=1,
                 save_last=True,
-            )
+            ))
 
         # Create trainer
         super().__init__(
