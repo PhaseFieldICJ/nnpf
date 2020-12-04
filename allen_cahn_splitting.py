@@ -23,9 +23,10 @@ class AllenCahnSplitting(AllenCahnProblem):
     --------
 
     After launching examples from heat_array_model and reaction_model:
+    >>> import os
     >>> from trainer import Trainer
     >>> trainer = Trainer(default_root_dir="logs_doctest", name="AllenCahnSplitting", version="test0", max_epochs=1)
-    >>> model = AllenCahnSplitting(['logs_doctest/HeatArray/test0', 'logs_doctest/Reaction/test0'], test_N=10, val_N=20)
+    >>> model = AllenCahnSplitting([os.path.join('logs_doctest', 'HeatArray', 'test0'), os.path.join('logs_doctest', 'Reaction', 'test0')], test_N=10, val_N=20)
     >>> import contextlib, io
     >>> with contextlib.redirect_stdout(io.StringIO()):
     ...     with contextlib.redirect_stderr(io.StringIO()):
@@ -35,7 +36,7 @@ class AllenCahnSplitting(AllenCahnProblem):
 
     Loading from checkpoint:
     >>> from problem import Problem
-    >>> model = Problem.load_from_checkpoint("logs_doctest/AllenCahnSplitting/test0")
+    >>> model = Problem.load_from_checkpoint(os.path.join('logs_doctest', 'AllenCahnSplitting', 'test0'))
     >>> type(model).__name__
     'AllenCahnSplitting'
     """

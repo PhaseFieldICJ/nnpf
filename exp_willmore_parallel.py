@@ -34,8 +34,9 @@ class WillmoreParallel(Problem):
     True
 
     Loading from checkpoint:
+    >>> import os
     >>> from problem import Problem
-    >>> model = Problem.load_from_checkpoint("logs_doctest/WillmoreParallel/test0/")
+    >>> model = Problem.load_from_checkpoint(os.path.join('logs_doctest', 'WillmoreParallel', 'test0'))
     >>> type(model).__name__
     'WillmoreParallel'
     """
