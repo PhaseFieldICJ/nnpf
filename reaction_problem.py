@@ -55,14 +55,14 @@ class ReactionDataset(TensorDataset):
 
     Parameters
     ----------
+    num_samples: int
+        Number of samples in the dataset
     epsilon: float
         Interface sharpness in phase field model
     dt: float
         Time step.
     margin: float
         Expanding length of the sampled [0, 1] interval
-    N: int
-        Number of samples in the dataset
 
     Examples
     --------
