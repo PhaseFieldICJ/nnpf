@@ -66,7 +66,7 @@ class ReactionDataset(TensorDataset):
 
     Examples
     --------
-    >>> dataset = ReactionDataset(1e-2, 1e-4, 0.1, 13)
+    >>> dataset = ReactionDataset(13, 1e-2, 1e-4, 0.1)
     >>> len(dataset)
     13
     >>> dataset[1]
@@ -77,11 +77,11 @@ class ReactionDataset(TensorDataset):
     (tensor([1.]), tensor([1.]))
     """
 
-    def __init__(self, epsilon, dt, margin, N):
+    def __init__(self, num_samples, epsilon, dt, margin):
         lower_bound = 0. - margin
         upper_bound = 1. + margin
         exact_sol = ReactionSolution(epsilon, dt)
-        train_x = torch.linspace(lower_bound, upper_bound, N)[:, None]
+        train_x = torch.linspace(lower_bound, upper_bound, num_samples)[:, None]
         train_y = exact_sol(train_x)
         super().__init__(train_x, train_y)
 
@@ -138,8 +138,8 @@ class ReactionProblem(Problem):
 
     def prepare_data(self):
         """ Prepare training and validation data """
-        self.train_dataset = ReactionDataset(self.hparams.epsilon, self.hparams.dt, self.hparams.margin, self.hparams.Ntrain)
-        self.val_dataset = ReactionDataset(self.hparams.epsilon, self.hparams.dt, self.hparams.margin, self.hparams.Nval)
+        self.train_dataset = ReactionDataset(self.hparams.Ntrain, self.hparams.epsilon, self.hparams.dt, self.hparams.margin)
+        self.val_dataset = ReactionDataset(self.hparams.Nval, self.hparams.epsilon, self.hparams.dt, self.hparams.margin)
 
     def train_dataloader(self):
         """ Returns the training data loader """
