@@ -46,11 +46,51 @@ class ReactionSolution:
         return result
 
 
+class ReactionDataset(TensorDataset):
+    """
+    Base dataset for the Allen-Cahn reaction term.
+
+    It is the exact solution for linear spaced samples in the [0, 1] interval
+    with a given external margin.
+
+    Parameters
+    ----------
+    epsilon: float
+        Interface sharpness in phase field model
+    dt: float
+        Time step.
+    margin: float
+        Expanding length of the sampled [0, 1] interval
+    N: int
+        Number of samples in the dataset
+
+    Examples
+    --------
+    >>> dataset = ReactionDataset(1e-2, 1e-4, 0.1, 13)
+    >>> len(dataset)
+    13
+    >>> dataset[1]
+    (tensor([0.]), tensor([0.]))
+    >>> dataset[2]
+    (tensor([0.1000]), tensor([0.0449]))
+    >>> dataset[11]
+    (tensor([1.]), tensor([1.]))
+    """
+
+    def __init__(self, epsilon, dt, margin, N):
+        lower_bound = 0. - margin
+        upper_bound = 1. + margin
+        exact_sol = ReactionSolution(epsilon, dt)
+        train_x = torch.linspace(lower_bound, upper_bound, N)[:, None]
+        train_y = exact_sol(train_x)
+        super().__init__(train_x, train_y)
+
+
 class ReactionProblem(Problem):
     """
     Base class for the Allen-Cahn reaction term learning problem
 
-    Features the train and validation data.
+    Features the train and validation data from ReactionDataset.
 
     Parameters
     ----------
@@ -98,20 +138,8 @@ class ReactionProblem(Problem):
 
     def prepare_data(self):
         """ Prepare training and validation data """
-
-        lower_bound = 0. - self.hparams.margin
-        upper_bound = 1. + self.hparams.margin
-        exact_sol = ReactionSolution(self.hparams.epsilon, self.hparams.dt)
-
-        # Training dataset
-        train_x = torch.linspace(lower_bound, upper_bound, self.hparams.Ntrain)[:, None]
-        train_y = exact_sol(train_x)
-        self.train_dataset = TensorDataset(train_x, train_y)
-
-        # Validation dataset
-        val_x = torch.linspace(lower_bound, upper_bound, self.hparams.Nval)[:, None]
-        val_y = exact_sol(val_x)
-        self.val_dataset = TensorDataset(val_x, val_y)
+        self.train_dataset = ReactionDataset(self.hparams.epsilon, self.hparams.dt, self.hparams.margin, self.hparams.Ntrain)
+        self.val_dataset = ReactionDataset(self.hparams.epsilon, self.hparams.dt, self.hparams.margin, self.hparams.Nval)
 
     def train_dataloader(self):
         """ Returns the training data loader """
