@@ -10,7 +10,7 @@ dependencies:
   - pytorch=1.6.0
   - torchvision>=0.7.0
   - cpuonly
-  - pytorch-lightning=1.0.2
+  - pytorch-lightning=1.0.8
   - tqdm
   - imageio
   - imageio-ffmpeg
