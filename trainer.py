@@ -207,7 +207,6 @@ class Trainer(pl.Trainer):
     """
     Lightning trainer with additional features
 
-    * automatic deterministic behavior if seed is given in the command-line
     * problem name
     * experiment custom version name (also in command-line)
 
