@@ -5,22 +5,28 @@ import sys
 import importlib
 
 modules = [
-    'allen_cahn_problem',
     'domain',
-    'heat_array_model',
-    'heat_problem',
     'nn_models',
     'nn_toolbox',
+    'shapes',
+    'splitting',
+    'visu',
+    'trainer',
     'problem',
     'reaction_model',
     'reaction_problem',
-    'shapes',
-    'splitting',
-    'trainer',
-    'visu',
-    'willmore_problem',
+    'heat_problem',
+    'heat_array_model',
+    'allen_cahn_problem',
     'allen_cahn_splitting',
+    'willmore_problem',
+    'exp_willmore_parallel',
+    'model_infos',
 ]
+
+# Cleaning log folder
+import shutil
+shutil.rmtree("logs_doctest")
 
 failure_count, test_count = 0, 0
 
