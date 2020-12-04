@@ -3,6 +3,7 @@
 import doctest
 import sys
 import importlib
+import time
 
 modules = [
     'domain',
@@ -32,19 +33,24 @@ failure_count, test_count = 0, 0
 
 for mod_name in modules:
     print("#" * 80)
+    print(f"# {mod_name}")
+
+    tic = time.time()
     module = importlib.import_module(mod_name)
     curr_failure_count, curr_test_count = doctest.testmod(module)
     failure_count += curr_failure_count
     test_count += curr_test_count
+    toc = time.time()
 
     if curr_test_count == 0:
-        print(f"-> {mod_name}: No test")
+        print(f"-> No test", end='')
     else:
         if curr_failure_count == 0:
-            print(f"-> {mod_name}: {curr_test_count} tests passed successfully")
+            print(f"-> {curr_test_count} tests passed successfully", end='')
         else:
-            print(f"-> {mod_name}: /!\ {curr_failure_count}/{curr_test_count} tests fail")
+            print(f"-> /!\ {curr_failure_count}/{curr_test_count} tests fail", end='')
 
+    print(f" ({toc - tic:.3f}s elapsed)")
     print()
 
 print()
