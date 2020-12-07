@@ -27,7 +27,10 @@ modules = [
 
 # Cleaning log folder
 import shutil
-shutil.rmtree("logs_doctest")
+try:
+    shutil.rmtree("logs_doctest")
+except FileNotFoundError:
+    pass
 
 failure_count, test_count = 0, 0
 
