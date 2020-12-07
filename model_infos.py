@@ -17,13 +17,14 @@ def display_model_infos(model_or_path, recursive=True):
 
     Examples
     --------
-    >>> display_model_infos("logs_doctest/Reaction/test0")
+    >>> import os
+    >>> display_model_infos(os.path.join('logs_doctest', 'Reaction', 'test0')) # doctest:+ELLIPSIS
     <BLANKLINE>
     Model summary:
         class: Reaction
         problem: ReactionProblem
         ndof: 47
-        checkpoint path: logs_doctest/Reaction/test0/checkpoints/epoch=0.ckpt
+        checkpoint path: ...
         epochs: 1
         steps: 1
         best score: 0
