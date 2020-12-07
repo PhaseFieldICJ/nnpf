@@ -222,7 +222,7 @@ class DistanceShow(ImShow):
     >>> s = periodic(union(sphere(0.5, [0, 0]), sphere(0.3, [0.4, 0.3])), d.bounds)
     >>> im = DistanceShow(s, d.X)
     >>> import matplotlib.pyplot as plt
-    >>> plt.show()
+    >>> plt.pause(0.1)
     """
     def __init__(self, shape_or_dist, X=None, scale=1., extent=None, in_color=[0.6, 0.8, 1.0], out_color=[0.9, 0.6, 0.3], **kwargs):
         # Extent

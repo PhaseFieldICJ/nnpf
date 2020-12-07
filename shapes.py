@@ -226,39 +226,3 @@ def replicate(shape, periods, limits=None):
 
     return dist
 
-def display(shape_or_dist, X=None, scale=1., extent=None, return_image=False):
-    """ Display a 2D shape or distance function.
-
-    Parameters
-    ----------
-    shape_or_dist: shape or torch.tensor
-        Shape definition (X needed) or directly the signed distance field
-    X: tuple or None
-        If shape_or_dist is a shape, X are the point coordinates
-    scale: real
-        Scale of the visualization
-    extent: tuple/list or None
-        Domain extent. If None, calculated from X (if given)
-    return_image: bool
-        If True, don't display the distance function and returns the image instead
-
-    Example
-    -------
-    >>> from domain import Domain
-    >>> d = Domain([[-1, 1], [-1, 1]], [256, 256])
-    >>> s = periodic(union(sphere(0.5, [0, 0]), sphere(0.3, [0.4, 0.3])), d.bounds)
-    >>> display(s, d.X)
-    """
-
-    import warnings
-    import visu
-
-    if return_image:
-        warnings.warn("You should use visu.distance_to_img instead", FutureWarning)
-        return visu.distance_to_img(shape_or_dist, X, scale, extent)
-    else:
-        warnings.warn("You should use visu.DistanceShow instead", FutureWarning)
-        import matplotlib.pyplot as plt
-        visu.DistanceShow(shape_or_dist, X, scale, extent)
-        plt.show()
-
