@@ -40,7 +40,7 @@ class HeatArray(HeatProblem):
     Training:
     >>> from trainer import Trainer
     >>> trainer = Trainer(default_root_dir="logs_doctest", name="HeatArray", version="test0", max_epochs=1)
-    >>> model = HeatArray(train_N=10, val_N=20)
+    >>> model = HeatArray(N=64, train_N=10, val_N=20)
     >>> import contextlib, io
     >>> with contextlib.redirect_stdout(io.StringIO()):
     ...     with contextlib.redirect_stderr(io.StringIO()):
