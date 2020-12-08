@@ -3,7 +3,7 @@ Base module and utils for the Allen-Cahn equation learning problem
 """
 
 import torch
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, Dataset, TensorDataset
 import math
 
 from problem import Problem, get_default_args
@@ -21,11 +21,11 @@ def sphere_dist_MC(X, radius=1., t=0., center=None, p=2):
     ----------
     X: tuple of Tensor
         Coordinates of each discretization point
-    radius: float
+    radius: float or Tensor
         Sphere radius
-    t: float
+    t: float or Tensor
         Evaluation time
-    center: list of float
+    center: list of (float or Tensor)
         Sphere center
     p: int, float or float("inf")
         Power in the lp-norm
@@ -35,8 +35,9 @@ def sphere_dist_MC(X, radius=1., t=0., center=None, p=2):
     dist: Tensor
         The signed distance field
     """
-    radius = torch.as_tensor(radius**2 - 2 * t, device=X[0].device, dtype=X[0].dtype) \
-                  .max(X[0].new_zeros(1)).sqrt()
+    radius = torch.as_tensor(radius, device=X[0].device, dtype=X[0].dtype)
+    t = torch.as_tensor(t, device=X[0].device, dtype=X[0].dtype)
+    radius = (radius**2 - 2 * t).max(X[0].new_zeros(1)).sqrt()
     return shapes.sphere(radius, center, p=p)(*X)
 
 
@@ -99,6 +100,130 @@ def check_sphere_volume(model, domain, radius, epsilon, dt, num_steps, center=No
     return model_volume, exact_volume
 
 
+class AllenCahnLazyDataset(Dataset):
+    """
+    Base dataset for Allen-Cahn problem, with samples generated at loading.
+
+    Dataset length depends on the broadcasted size of radius, t, center and epsilon.
+
+    Phase fields are actually generated on-the-fly in `__getitem__`.
+
+    Parameters
+    ----------
+    X: tuple of Tensor
+        Coordinates of each discretization point
+    radius: float or Tensor
+        Sphere radius
+    dt: float or Tensor
+        Time step
+    center: list of float or Tensor
+        Sphere center
+    epsilon: float or Tensor
+        Interface sharpness in phase field model
+    p: int, float or float("inf")
+        Power in the lp-norm
+    steps: int
+        Number of evolution steps applied to each input
+
+    Examples
+    --------
+
+    # The domain
+    >>> from domain import Domain
+    >>> d = Domain([[-1, 1], [-1, 1]], 21)
+
+    # Helper
+    >>> def sol(X, radius, center, epsilon, t, lp=2):
+    ...     return profil(sphere_dist_MC(
+    ...         torch.as_tensor(X),
+    ...         radius,
+    ...         t,
+    ...         torch.as_tensor(center),
+    ...         lp), epsilon)
+
+    # With one data
+    >>> ds = AllenCahnLazyDataset(d.X, 0.5, [0., 0.], 0.1, 0.1)
+    >>> len(ds)
+    1
+    >>> len(ds[0])
+    2
+    >>> ds[0][0].shape
+    torch.Size([1, 21, 21])
+    >>> torch.allclose(ds[0][0][0, 1, 11], sol([-0.9, 0.1], 0.5, [0., 0.], 0.1, 0.))
+    True
+    >>> torch.allclose(ds[0][1][0, 1, 11], sol([-0.9, 0.1], 0.5, [0., 0.], 0.1, 0.1))
+    True
+
+    # With multiple radius
+    >>> ds = AllenCahnLazyDataset(d.X, [0.1, 0.2, 0.3, 0.4, 0.5], [0., 0.], 0.1, 0.1)
+    >>> len(ds)
+    5
+    >>> ds[1:4][0].shape
+    torch.Size([3, 1, 21, 21])
+    >>> torch.allclose(ds[2][0][0, 1, 11], sol([-0.9, 0.1], 0.3, [0., 0.], 0.1, 0))
+    True
+
+    # Everything
+    >>> ds = AllenCahnLazyDataset(
+    ...     d.X,
+    ...     torch.linspace(0., 1., 11), # radius
+    ...     torch.stack((torch.linspace(-1., 0, 11), torch.linspace(0, 1., 11))), # center
+    ...     torch.linspace(0.1, 1.1, 11), # epsilon
+    ...     torch.linspace(0.1, 1.1, 11), # dt
+    ...     lp=1,
+    ...     steps=5,
+    ... )
+    >>> len(ds)
+    11
+    >>> len(ds[2:6])
+    6
+    >>> ds[2:6][3].shape
+    torch.Size([4, 1, 21, 21])
+    >>> torch.allclose(ds[4][2][0, 1, 11], sol([-0.9, 0.1], 0.4, [-0.6, 0.4], 0.5, 2*0.5, lp=1))
+    True
+    """
+
+    def __init__(self, X, radius, center, epsilon, dt, lp=2, steps=1):
+        # Additionnal dimensions for appropriate broadcasting
+        dim = X[0].ndim
+        sup_dims = (1,) + dim * (1,)
+
+        radius = torch.as_tensor(radius).reshape(-1, *sup_dims)
+        center = torch.as_tensor(center).reshape(dim, -1, *sup_dims)
+        epsilon = torch.as_tensor(epsilon).reshape(-1, *sup_dims)
+        dt = torch.as_tensor(dt).reshape(-1, *sup_dims)
+
+        self.num_samples = max(
+            radius.shape[0],
+            center.shape[1],
+            epsilon.shape[0],
+            dt.shape[0])
+
+        self.X = X
+        self.lp = lp
+        self.steps = steps
+        self.radius = radius.expand(self.num_samples, *sup_dims)
+        self.center = center.expand(dim, self.num_samples, *sup_dims)
+        self.epsilon = epsilon.expand(self.num_samples, *sup_dims)
+        self.dt = dt.expand(self.num_samples, *sup_dims)
+        # Should be a better way...
+
+    def __len__(self):
+        return self.num_samples
+
+    def __getitem__(self, idx):
+        return tuple(
+            profil(
+                sphere_dist_MC(
+                    self.X,
+                    self.radius[idx, ...],
+                    i * self.dt[idx, ...],
+                    self.center[:, idx, ...],
+                    self.lp),
+                self.epsilon[idx, ...])
+            for i in range(self.steps + 1))
+
+
 class AllenCahnProblem(Problem):
     """
     Base class for the Allen-Cahn equation problem
@@ -134,7 +259,7 @@ class AllenCahnProblem(Problem):
     train_N, val_N: int
         Size of the training and validation datasets
     train_steps, val_steps: int
-        Number of evolution step applied to each input
+        Number of evolution steps applied to each input
     kwargs: dict
         Parameters passed to Problem (see doc)
     """
