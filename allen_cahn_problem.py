@@ -124,6 +124,8 @@ class AllenCahnLazyDataset(Dataset):
         Power in the lp-norm
     steps: int
         Number of evolution steps applied to each input
+    reverse: bool or Tensor of bool
+        Reverse phase's inside and outside
 
     Examples
     --------
@@ -133,8 +135,8 @@ class AllenCahnLazyDataset(Dataset):
     >>> d = Domain([[-1, 1], [-1, 1]], 21)
 
     # Helper
-    >>> def sol(X, radius, center, epsilon, t, lp=2):
-    ...     return profil(sphere_dist_MC(
+    >>> def sol(X, radius, center, epsilon, t, lp=2, reverse=False):
+    ...     return profil((1. - 2. * reverse) * sphere_dist_MC(
     ...         torch.as_tensor(X),
     ...         radius,
     ...         t,
@@ -152,6 +154,11 @@ class AllenCahnLazyDataset(Dataset):
     >>> torch.allclose(ds[0][0][0, 1, 11], sol([-0.9, 0.1], 0.5, [0., 0.], 0.1, 0.))
     True
     >>> torch.allclose(ds[0][1][0, 1, 11], sol([-0.9, 0.1], 0.5, [0., 0.], 0.1, 0.1))
+    True
+
+    # Reverse
+    >>> ds = AllenCahnLazyDataset(d.X, 0.5, [0., 0.], 0.1, 0.1, reverse=True)
+    >>> torch.allclose(ds[0][0][0, 1, 11], sol([-0.9, 0.1], 0.5, [0., 0.], 0.1, 0., reverse=True))
     True
 
     # With multiple radius
@@ -172,6 +179,7 @@ class AllenCahnLazyDataset(Dataset):
     ...     torch.linspace(0.1, 1.1, 11), # dt
     ...     lp=1,
     ...     steps=5,
+    ...     reverse=torch.linspace(0., 1., 11) <= 0.5,
     ... )
     >>> len(ds)
     11
@@ -179,11 +187,11 @@ class AllenCahnLazyDataset(Dataset):
     6
     >>> ds[2:6][3].shape
     torch.Size([4, 1, 21, 21])
-    >>> torch.allclose(ds[4][2][0, 1, 11], sol([-0.9, 0.1], 0.4, [-0.6, 0.4], 0.5, 2*0.5, lp=1))
+    >>> torch.allclose(ds[4][2][0, 1, 11], sol([-0.9, 0.1], 0.4, [-0.6, 0.4], 0.5, 2*0.5, lp=1, reverse=True))
     True
     """
 
-    def __init__(self, X, radius, center, epsilon, dt, lp=2, steps=1):
+    def __init__(self, X, radius, center, epsilon, dt, lp=2, steps=1, reverse=False):
         # Additionnal dimensions for appropriate broadcasting
         dim = X[0].ndim
         sup_dims = (1,) + dim * (1,)
@@ -192,12 +200,15 @@ class AllenCahnLazyDataset(Dataset):
         center = torch.as_tensor(center).reshape(dim, -1, *sup_dims)
         epsilon = torch.as_tensor(epsilon).reshape(-1, *sup_dims)
         dt = torch.as_tensor(dt).reshape(-1, *sup_dims)
+        reverse = torch.as_tensor(reverse).reshape(-1, *sup_dims)
 
         self.num_samples = max(
             radius.shape[0],
             center.shape[1],
             epsilon.shape[0],
-            dt.shape[0])
+            dt.shape[0],
+            reverse.shape[0],
+        )
 
         self.X = X
         self.lp = lp
@@ -206,14 +217,16 @@ class AllenCahnLazyDataset(Dataset):
         self.center = center.expand(dim, self.num_samples, *sup_dims)
         self.epsilon = epsilon.expand(self.num_samples, *sup_dims)
         self.dt = dt.expand(self.num_samples, *sup_dims)
+        self.reverse = reverse.expand(self.num_samples, *sup_dims)
         # Should be a better way...
 
     def __len__(self):
         return self.num_samples
 
     def __getitem__(self, idx):
+        sign = 1. - 2. * self.reverse[idx, ...]
         return tuple(
-            profil(
+            profil( sign *
                 sphere_dist_MC(
                     self.X,
                     self.radius[idx, ...],
@@ -238,8 +251,8 @@ class AllenCahnDataset(TensorDataset):
     >>> d = Domain([[-1, 1], [-1, 1]], 21)
 
     # Helper
-    >>> def sol(X, radius, center, epsilon, t, lp=2):
-    ...     return profil(sphere_dist_MC(
+    >>> def sol(X, radius, center, epsilon, t, lp=2, reverse=False):
+    ...     return profil((1. - 2. * reverse) * sphere_dist_MC(
     ...         torch.as_tensor(X),
     ...         radius,
     ...         t,
@@ -255,6 +268,7 @@ class AllenCahnDataset(TensorDataset):
     ...     torch.linspace(0.1, 1.1, 11), # dt
     ...     lp=1,
     ...     steps=5,
+    ...     reverse=torch.linspace(0., 1., 11) <= 0.5,
     ... )
     >>> len(ds)
     11
@@ -262,7 +276,7 @@ class AllenCahnDataset(TensorDataset):
     6
     >>> ds[2:6][3].shape
     torch.Size([4, 1, 21, 21])
-    >>> torch.allclose(ds[4][2][0, 1, 11], sol([-0.9, 0.1], 0.4, [-0.6, 0.4], 0.5, 2*0.5, lp=1))
+    >>> torch.allclose(ds[4][2][0, 1, 11], sol([-0.9, 0.1], 0.4, [-0.6, 0.4], 0.5, 2*0.5, lp=1, reverse=True))
     True
     """
 
