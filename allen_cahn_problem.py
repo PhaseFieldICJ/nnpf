@@ -224,6 +224,53 @@ class AllenCahnLazyDataset(Dataset):
             for i in range(self.steps + 1))
 
 
+class AllenCahnDataset(TensorDataset):
+    """
+    Base dataset for Allen-Cahn problem (non-lazy version).
+
+    See documentatin of AllenCahnLazyDataset
+
+    Examples
+    --------
+
+    # The domain
+    >>> from domain import Domain
+    >>> d = Domain([[-1, 1], [-1, 1]], 21)
+
+    # Helper
+    >>> def sol(X, radius, center, epsilon, t, lp=2):
+    ...     return profil(sphere_dist_MC(
+    ...         torch.as_tensor(X),
+    ...         radius,
+    ...         t,
+    ...         torch.as_tensor(center),
+    ...         lp), epsilon)
+
+    # Everything
+    >>> ds = AllenCahnDataset(
+    ...     d.X,
+    ...     torch.linspace(0., 1., 11), # radius
+    ...     torch.stack((torch.linspace(-1., 0, 11), torch.linspace(0, 1., 11))), # center
+    ...     torch.linspace(0.1, 1.1, 11), # epsilon
+    ...     torch.linspace(0.1, 1.1, 11), # dt
+    ...     lp=1,
+    ...     steps=5,
+    ... )
+    >>> len(ds)
+    11
+    >>> len(ds[2:6])
+    6
+    >>> ds[2:6][3].shape
+    torch.Size([4, 1, 21, 21])
+    >>> torch.allclose(ds[4][2][0, 1, 11], sol([-0.9, 0.1], 0.4, [-0.6, 0.4], 0.5, 2*0.5, lp=1))
+    True
+    """
+
+    def __init__(self, *args, **kwargs):
+        ds = AllenCahnLazyDataset(*args, **kwargs)
+        super().__init__(*ds[:])
+
+
 class AllenCahnProblem(Problem):
     """
     Base class for the Allen-Cahn equation problem
