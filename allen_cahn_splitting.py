@@ -26,7 +26,7 @@ class AllenCahnSplitting(AllenCahnProblem):
     >>> import os
     >>> from trainer import Trainer
     >>> trainer = Trainer(default_root_dir="logs_doctest", name="AllenCahnSplitting", version="test0", max_epochs=1)
-    >>> model = AllenCahnSplitting([os.path.join('logs_doctest', 'HeatArray', 'test0'), os.path.join('logs_doctest', 'Reaction', 'test0')], test_N=10, val_N=20)
+    >>> model = AllenCahnSplitting([os.path.join('logs_doctest', 'HeatArray', 'test0'), os.path.join('logs_doctest', 'Reaction', 'test0')], test_N=10, val_N=20, val_reverse=0.5)
     >>> import contextlib, io
     >>> with contextlib.redirect_stdout(io.StringIO()):
     ...     with contextlib.redirect_stderr(io.StringIO()):

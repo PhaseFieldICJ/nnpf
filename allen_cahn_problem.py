@@ -321,6 +321,8 @@ class AllenCahnProblem(Problem):
         Size of the training and validation datasets
     train_steps, val_steps: int
         Number of evolution steps applied to each input
+    train_reverse, val_reverse: float
+        Probability of having a sample with reversed inside and outside
     kwargs: dict
         Parameters passed to Problem (see doc)
     """
@@ -329,7 +331,8 @@ class AllenCahnProblem(Problem):
                  batch_size=10, batch_shuffle=True, lr=1e-3,
                  loss_norms=None, loss_power=2.,
                  radius=[0.05, 0.45], lp=2,
-                 train_N=100, train_steps=1, val_N=200, val_steps=5,
+                 train_N=100, train_steps=1, train_reverse=0.,
+                 val_N=200, val_steps=5, val_reverse=0.,
                  **kwargs):
 
         super().__init__(**kwargs)
@@ -343,6 +346,7 @@ class AllenCahnProblem(Problem):
             'bounds', 'N', 'dt', 'epsilon',
             'batch_size', 'batch_shuffle', 'lr', 'loss_norms', 'loss_power',
             'radius', 'lp', 'train_N', 'val_N', 'train_steps', 'val_steps',
+            'train_reverse', 'val_reverse',
         )
 
     @property
@@ -434,7 +438,7 @@ class AllenCahnProblem(Problem):
         center = [0.5 * sum(b) for b in self.domain.bounds]
 
         # Datasets
-        def generate_data(num_samples, steps):
+        def generate_data(num_samples, steps, reverse):
             return AllenCahnDataset(
                 self.domain.X,
                 radius=torch.linspace(radius[0], radius[1], num_samples),
@@ -443,10 +447,11 @@ class AllenCahnProblem(Problem):
                 dt=self.hparams.dt,
                 lp=self.hparams.lp,
                 steps=steps,
+                reverse=torch.rand(num_samples) < reverse,
             )
 
-        self.train_dataset = generate_data(self.hparams.train_N, self.hparams.train_steps)
-        self.val_dataset = generate_data(self.hparams.val_N, self.hparams.val_steps)
+        self.train_dataset = generate_data(self.hparams.train_N, self.hparams.train_steps, self.hparams.train_reverse)
+        self.val_dataset = generate_data(self.hparams.val_N, self.hparams.val_steps, self.hparams.val_reverse)
 
     def train_dataloader(self):
         """ Returns the training data loader """
