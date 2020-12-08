@@ -419,25 +419,20 @@ class AllenCahnProblem(Problem):
         radius = [domain_diameter * r for r in self.hparams.radius]
         center = [0.5 * sum(b) for b in self.domain.bounds]
 
+        # Datasets
         def generate_data(num_samples, steps):
-            return tuple(
-                profil(
-                    sphere_dist_MC(
-                        self.domain.X,
-                        radius=torch.linspace(radius[0], radius[1], num_samples).reshape(-1, *sup_dims),
-                        center=center,
-                        t=i*self.hparams.dt,
-                        p=self.hparams.lp),
-                    self.hparams.epsilon)
-                for i in range(steps + 1))
+            return AllenCahnDataset(
+                self.domain.X,
+                radius=torch.linspace(radius[0], radius[1], num_samples),
+                center=center,
+                epsilon=self.hparams.epsilon,
+                dt=self.hparams.dt,
+                lp=self.hparams.lp,
+                steps=steps,
+            )
 
-        # Training dataset
-        train_x, *train_y = generate_data(self.hparams.train_N, self.hparams.train_steps)
-        self.train_dataset = TensorDataset(train_x, *train_y)
-
-        # Validation dataset
-        val_x, *val_y = generate_data(self.hparams.val_N, self.hparams.val_steps)
-        self.val_dataset = TensorDataset(val_x, *val_y)
+        self.train_dataset = generate_data(self.hparams.train_N, self.hparams.train_steps)
+        self.val_dataset = generate_data(self.hparams.val_N, self.hparams.val_steps)
 
     def train_dataloader(self):
         """ Returns the training data loader """
