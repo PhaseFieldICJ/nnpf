@@ -25,4 +25,3 @@
 - epoch=#-v#.ckpt ?! (collide with auto saving initial state in trainer.Trainer)
 - common animation script or functions
 - animation features for `allen_cahn_problem`
-- Domain.X & Domain.K returns real-sized tensors using `torch.broadcast_tensors` since it returns views instead of dense tensors.

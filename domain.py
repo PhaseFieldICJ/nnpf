@@ -176,21 +176,29 @@ class Domain:
     (tensor([0., 1., 2., 3., 4., 5.]),)
     >>> d = Domain([(0, 1), (-1, 1)], [5, 5])
     >>> d.X[0]
-    tensor([[0.0000],
-            [0.2500],
-            [0.5000],
-            [0.7500],
-            [1.0000]])
+    tensor([[0.0000, 0.0000, 0.0000, 0.0000, 0.0000],
+            [0.2500, 0.2500, 0.2500, 0.2500, 0.2500],
+            [0.5000, 0.5000, 0.5000, 0.5000, 0.5000],
+            [0.7500, 0.7500, 0.7500, 0.7500, 0.7500],
+            [1.0000, 1.0000, 1.0000, 1.0000, 1.0000]])
     >>> d.X[1]
-    tensor([[-1.0000, -0.5000,  0.0000,  0.5000,  1.0000]])
+    tensor([[-1.0000, -0.5000,  0.0000,  0.5000,  1.0000],
+            [-1.0000, -0.5000,  0.0000,  0.5000,  1.0000],
+            [-1.0000, -0.5000,  0.0000,  0.5000,  1.0000],
+            [-1.0000, -0.5000,  0.0000,  0.5000,  1.0000],
+            [-1.0000, -0.5000,  0.0000,  0.5000,  1.0000]])
     >>> d.K[0]
-    tensor([[ 0.],
-            [ 1.],
-            [ 2.],
-            [-2.],
-            [-1.]])
+    tensor([[ 0.,  0.,  0.],
+            [ 1.,  1.,  1.],
+            [ 2.,  2.,  2.],
+            [-2., -2., -2.],
+            [-1., -1., -1.]])
     >>> d.K[1]
-    tensor([[0.0000, 0.5000, 1.0000]])
+    tensor([[0.0000, 0.5000, 1.0000],
+            [0.0000, 0.5000, 1.0000],
+            [0.0000, 0.5000, 1.0000],
+            [0.0000, 0.5000, 1.0000],
+            [0.0000, 0.5000, 1.0000]])
     >>> _ = torch.manual_seed(0)
     >>> a = torch.rand(d.spatial_shape)
     >>> torch.allclose(a, d.ifft(d.fft(a)))
@@ -228,8 +236,15 @@ class Domain:
 
     @property
     def X(self):
-        """ Spatial coordinates """
-        return tuple(torch.linspace(a, b, n, device=self.device).reshape(self._broadcast_shape(i)) for i, ((a, b), n) in enumerate(zip(self.bounds, self.N)))
+        """
+        Spatial coordinates
+
+        Notes
+        -----
+        It actually returns a view on repetitions of 1D tensors so that it is memory efficient.
+        Thus, returned tensors should not be modified!
+        """
+        return torch.meshgrid(*(torch.linspace(a, b, n, device=self.device) for (a, b), n in zip(self.bounds, self.N)))
 
     @property
     def dX(self):
@@ -238,10 +253,17 @@ class Domain:
 
     @property
     def K(self):
-        """ Frequency coordinates """
+        """
+        Frequency coordinates
+
+        Notes
+        -----
+        It actually returns a view on repetitions of 1D tensors so that it is memory efficient.
+        Thus, returned tensors should not be modified!
+        """
         k = [fftfreq(n, (b - a) / n, device=self.device) for (a, b), n in zip(self.bounds[:-1], self.N[:-1])] \
              + [rfftfreq(self.N[-1], (self.bounds[-1][1] - self.bounds[-1][0]) / self.N[-1], device=self.device)]
-        return tuple(k.reshape(self._broadcast_shape(i)) for i, k in enumerate(k))
+        return torch.meshgrid(*k)
 
     def _check_real_shape(self, u):
         assert u.shape[-self.dim:] == self.spatial_shape, "Input shape doesn't match domain shape"
