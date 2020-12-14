@@ -46,24 +46,42 @@ tensor([[ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571],
 """
 
 import torch
+import functools
+
+###############################################################################
+# Tools
+
+def norm(X, p=2):
+    """
+    Vector lp norm
+
+    Also works on generator to allow some optmization
+    (avoid stacking components before calculating the norm).
+
+    Parameters
+    ----------
+    X: iterable
+        Iterable over vector components
+    p: int, float or inf
+        p of the l-p norm
+    """
+    if p == float("inf"):
+        return functools.reduce(
+            lambda x, y: torch.max(x, y), # prefer torch.maximum in PyTorch 1.7
+            (x.abs() for x in X))
+
+    else:
+        # TODO: if needed, could be optimized for 1 and even power
+        return sum(x.abs().pow(p) for x in X).pow(1 / p)
+
 
 ###############################################################################
 # Shapes
 
 def dot(p=2):
     """ Signed lp distance to a dot """
-
-    if p == float("inf"):
-        def dist(*X):
-            result = X[0].abs()
-            for x in X[1:]:
-                result = torch.max(result, x.abs())
-            return result
-
-    else:
-        # TODO: if needed, could be optimized for 1 and even power
-        def dist(*X):
-            return sum(x.abs().pow(p) for x in X).pow(1 / p)
+    def dist(*X):
+        return norm(X, p)
 
     return dist
 
@@ -153,7 +171,7 @@ def line(dim_or_normal, pt_or_shift=0., normalize=False):
     normalize: bool
         True to normalize the given normal before applying the shift
     """
-    return magnitude(half_plane(dim_or_normal, pt_or_shift, normalize))
+    return unsign(half_plane(dim_or_normal, pt_or_shift, normalize))
 
 def segment(a, b):
     """ Segment between two points """
@@ -164,7 +182,7 @@ def segment(a, b):
 
     def dist(*X):
         h = torch.clamp(sum((X[i] - a[i]) * ab[i] for i in range(len(X))) / dot_ab, 0., 1.)
-        return torch.sqrt(sum((X[i] - a[i] - ab[i] * h)**2 for i in range(len(X))))
+        return norm((X[i] - a[i] - ab[i] * h for i in range(len(X))), p=2)
 
     return dist
 
@@ -179,10 +197,7 @@ def capsule(a, b, thickness):
 def reduce(op, *shapes):
     """ Reduce an operator over multiple shapes """
     def dist(*X):
-        result = shapes[0](*X)
-        for s in shapes[1:]:
-            result = op(result, s(*X)) # TODO: using out parameters instead of returning
-        return result
+        return functools.reduce(op, (s(*X) for s in shapes))
 
     return dist
 
@@ -192,8 +207,8 @@ def reverse(shape):
         return -shape(*X)
     return dist
 
-def magnitude(shape):
-    """ Return magnitude of distance to the given shape """
+def unsign(shape):
+    """ Return absolute value of distance to the given shape """
     def dist(*X):
         return shape(*X).abs()
     return dist
