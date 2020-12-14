@@ -74,17 +74,11 @@ def sphere(radius, center=None, p=2):
     else:
         return translation(sphere(radius, p=p), center)
 
-def box(sizes):
+def box(sizes, p=2):
     """ Signed distance to a box """
-    def dist(*X):
-        assert len(X) == len(sizes), "Box & coords dimensions do not match!"
-        q = torch.stack([x.abs() - s/2 for x, s in zip(X, sizes)])
-        z = q.new_zeros(1)
-        return torch.max(q, z).norm(dim=0) + torch.min(q.max(dim=0).values, z)
+    return elongate(dot(p), sizes)
 
-    return dist
-
-def half_plane(dim_or_normal, shift=0., normalize=False):
+def half_plane(dim_or_normal, pt_or_shift=0., normalize=False):
     """
     Signed distance to the half plane with given normal
 
@@ -93,27 +87,91 @@ def half_plane(dim_or_normal, shift=0., normalize=False):
     dim_or_normal: int or iterable
         If integer, dimension orthogonal to the plane.
         If iterable, normal vector to the plane.
-    shift: float
-        Shift from the origin (factor of the normal's norm)
+    pt_or_shift: real or iterable
+        If real, distance of the line to the origin (factor of the normal's norm)
+        If iterable, a point that lies on the line
     normalize: bool
-        True to normalize the given normal
+        True to normalize the given normal before applying the shift
     """
+    pt_or_shift = torch.as_tensor(pt_or_shift)
+    dim_or_normal = torch.as_tensor(dim_or_normal)
 
-    if isinstance(dim_or_normal, int):
+    # Integer dimension
+    if dim_or_normal.ndim == 0:
+        if pt_or_shift.ndim > 0:
+            pt_or_shift = pt_or_shift[dim_or_normal]
+
         def dist(*X):
-            return sum((dim_or_normal == i) * x for i, x in enumerate(X)) - shift
+            return sum((dim_or_normal == i) * x for i, x in enumerate(X)) - pt_or_shift
+
+    # Normal
     else:
-        normal = torch.tensor(dim_or_normal)
-        if normalize:
-            normal /= normal.norm()
+        if pt_or_shift.ndim == 0 and not normalize:
+            pt_or_shift = pt_or_shift * dim_or_normal.norm()
+
+        normal = torch.nn.functional.normalize(dim_or_normal, p=2, dim=0)
+
+        if pt_or_shift.ndim > 0:
+            pt_or_shift = pt_or_shift.dot(normal)
+
         def dist(*X):
-            return sum(n * x for n, x in zip(normal, X)) - shift
+            return sum(n * x for n, x in zip(normal, X)) - pt_or_shift
 
     return dist
 
-def beam(dim_or_normal, thickness, normalize=False):
-    """ Signed distance to the infinite beam with normal along dim """
-    return subtraction(half_plane(dim_or_normal, thickness / 2, normalize), half_plane(dim_or_normal, -thickness / 2, normalize))
+def beam(dim_or_normal, thickness, pt_or_shift=0., normalize=False):
+    """
+    Signed distance to the infinite beam with normal along dim
+
+    Parameters
+    ----------
+    dim_or_normal: int or iterable
+        If integer, dimension orthogonal to the plane.
+        If iterable, normal vector to the plane.
+    thickness: real
+        thickness of the beam
+    pt_or_shift: real or iterable
+        If real, distance of the center line to the origin (factor of the normal's norm)
+        If iterable, a point that lies on the center line
+    normalize: bool
+        True to normalize the given normal before applying the shift
+    """
+    return rounding(line(dim_or_normal, pt_or_shift, normalize), thickness / 2)
+
+def line(dim_or_normal, pt_or_shift=0., normalize=False):
+    """
+    Distance to a line
+
+    Parameters
+    ----------
+    dim_or_normal: int or iterable
+        If integer, dimension orthogonal to the plane.
+        If iterable, normal vector to the plane.
+    pt_or_shift: real or iterable
+        If real, distance of the line to the origin (factor of the normal's norm)
+        If iterable, a point that lies on the line
+    normalize: bool
+        True to normalize the given normal before applying the shift
+    """
+    return magnitude(half_plane(dim_or_normal, pt_or_shift, normalize))
+
+def segment(a, b):
+    """ Segment between two points """
+    a = torch.as_tensor(a)
+    b = torch.as_tensor(b)
+    ab = b - a
+    dot_ab = torch.dot(ab, ab)
+
+    def dist(*X):
+        h = torch.clamp(sum((X[i] - a[i]) * ab[i] for i in range(len(X))) / dot_ab, 0., 1.)
+        return torch.sqrt(sum((X[i] - a[i] - ab[i] * h)**2 for i in range(len(X))))
+
+    return dist
+
+def capsule(a, b, thickness):
+    """ Capsule between two points """
+    return rounding(segment(a, b), thickness / 2)
+
 
 ###############################################################################
 # Operations
@@ -132,6 +190,13 @@ def reverse(shape):
     """ Reverse interior/exterior of given shape """
     def dist(*X):
         return -shape(*X)
+    return dist
+
+def magnitude(shape):
+    """ Return magnitude of distance to the given shape """
+    def dist(*X):
+        return shape(*X).abs()
+    return dist
 
 def union(*shapes):
     """ Union of shapes (not exact in the interior) """
@@ -223,4 +288,48 @@ def replicate(shape, periods, limits=None):
         return shape(*X_transform(*X))
 
     return dist
+
+def onion(shape, thickness):
+    """ Makes a shape annular with given thickness """
+    def dist(*X):
+        return shape(*X).abs() - thickness
+
+    return dist
+
+def elongate(shape, sizes):
+    """ Elonge a shape in each direction with given sizes """
+    def dist(*X):
+        q = torch.stack([x.abs() - s/2 for x, s in zip(X, sizes)])
+        z = q.new_zeros(1)
+        return shape(*torch.max(q, z)) + torch.min(q.max(dim=0).values, z)
+
+    return dist
+
+def displace(shape, displacement):
+    """ Displacement of a shape """
+    def dist(*X):
+        return shape(*X) + displacement(*X)
+
+    return dist
+
+def transform(shape, t):
+    """
+    Affine transformation of a shape.
+
+    Transformation matrix t should be of size d*d
+    or d*(d+1) where the last column is a translation.
+    """
+    dim = t.shape[0]
+    if t.shape[-1] == dim + 1:
+        translation = t[:, -1]
+    else:
+        translation = t.new_zeros(dim)
+
+    t = torch.inverse(t[:dim, :dim])
+
+    def dist(*X):
+        return shape(*(sum(X[j] * t[i, j] for j in range(dim)) - translation[i] for i in range(dim)))
+
+    return dist
+
 
