@@ -36,8 +36,9 @@ def sphere_dist_MC(X, radius=1., t=0., center=None, p=2):
     dist: Tensor
         The signed distance field
     """
-    radius = torch.as_tensor(radius**4 + 2 * t, device=X[0].device, dtype=X[0].dtype) \
-                  .max(X[0].new_zeros(1)).pow(1/4)
+    radius = torch.as_tensor(radius, device=X[0].device, dtype=X[0].dtype)
+    t = torch.as_tensor(t, device=X[0].device, dtype=X[0].dtype)
+    radius = (radius**4 + 2 * t).max(X[0].new_zeros(1)).pow(1/4)
     return shapes.sphere(radius, center, p=p)(*X)
 
 
