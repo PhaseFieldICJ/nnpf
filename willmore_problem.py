@@ -7,491 +7,62 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 import math
 
-from problem import Problem, get_default_args
+import mean_curvature_problem as mcp
 from domain import Domain
-from phase_field import profil
+from phase_field import profil, iprofil
 import nn_toolbox
 import shapes
 
 
-def sphere_dist_MC(X, radius=1., t=0., center=None, p=2):
-    """
-    Signed distance (lp norm) field to a sphere evolving with Willmore law
-
-    Parameters
-    ----------
-    X: tuple of Tensor
-        Coordinates of each discretization point
-    radius: float
-        Sphere radius
-    t: float
-        Evaluation time
-    center: list of float
-        Sphere center
-    p: int, float or float("inf")
-        Power in the lp-norm
-
-    Returns
-    -------
-    dist: Tensor
-        The signed distance field
-    """
-    radius = torch.as_tensor(radius, device=X[0].device, dtype=X[0].dtype)
-    t = torch.as_tensor(t, device=X[0].device, dtype=X[0].dtype)
-    radius = (radius**4 + 2 * t).max(X[0].new_zeros(1)).pow(1/4)
-    return shapes.sphere(radius, center, p=p)(*X)
-
-
-def check_sphere_volume(model, domain, radius, epsilon, dt, num_steps, center=None, p=2, progress_bar=False):
+def check_sphere_mass(*args, **kwargs):
     """
     Check a Willmore model by measuring sphere volume decreasing
 
-    Parameters
-    ----------
-    model: callable
-        Returns `u^{n+1}` from `u^{n}. Don't forget to disable grad calculation before!
-    domain: domain.Domain
-        Discretization domain
-    radius: float
-        Sphere radius
-    epsilon: float
-        Interface sharpness in phase field model
-    dt: float
-        Time step
-    num_steps: int
-        Number of time steps
-    center: list of float
-        Sphere center (domain center if None)
-    p: int, float or float("inf")
-        Power in the lp-norm
-    progress_bar: bool
-        True to display a progress bar
-
-    Returns
-    -------
-    model_volume: torch.tensor
-        Sphere volume evolution for the given model
-    exact_volume: torch.tensor
-        Sphere volume evolution of the solution
+    See documentation of mean_curvature_problem.check_sphere_volume
     """
-
-    center = center or [0.5 * sum(b) for b in domain.bounds]
-
-    def generate_solution(i):
-        return profil(sphere_dist_MC(domain.X, radius, i * dt, center, p=p), epsilon)[None, None, ...]
-
-    def vol(u):
-        return domain.dX.prod() * u.sum()
-
-    model_volume = domain.X[0].new_empty(num_steps + 1)
-    exact_volume = model_volume.new_empty(num_steps + 1)
-
-    u = generate_solution(0)
-
-    rg = range(num_steps + 1)
-    if progress_bar:
-        from tqdm import tqdm
-        rg = tqdm(rg)
-
-    for i in rg:
-        model_volume[i] = vol(u)
-        exact_volume[i] = vol(generate_solution(i))
-        u = model(u)
-
-    return model_volume, exact_volume
+    return mcp.check_sphere_volume(WillmoreProblem.sphere_radius, WillmoreProblem.profil, *args, **kwargs)
 
 
-class WillmoreProblem(Problem):
+class WillmoreProblem(mcp.MeanCurvatureProblem):
     """
     Base class for the Willmore equation problem
 
-    Features the train and validation data, and the metric.
+    Features the train/validation data, and the metric.
 
-    Parameters
-    ----------
-    bounds: iterable of pairs of float
-        Bounds of the domain
-    N: int or iterable of int
-        Number of discretization points
-    epsilon: float
-        Interface sharpness in phase field model
-    dt: float
-        Time step. epsilon**2 if None.
-    batch_size: int
-        Size of the batch during training and validation steps. Full data if None.
-    batch_shuffle: bool
-        Shuffle batch content.
-    lr: float
-        Learning rate of the optimizer
-    loss_norms: list of pair (p, weight)
-        Compose loss as sum of weight * (output - target).norm(p).pow(e).
-        Default to l2 norm.
-        Exponent e is defined with loss_power parameter.
-    loss_power: float
-        Power applied to each loss term (for regularization purpose).
-    radius: list of 2 floats
-        Bounds on sphere radius (ratio of domain bounds) used for training and validation datasets.
-    lp: int or float
-        Power of the lp-norm used to defined the spheres in training and validation datasets.
-    train_N, val_N: int
-        Size of the training and validation datasets
-    train_steps, val_steps: int
-        Number of evolution step applied to each input
-    kwargs: dict
-        Parameters passed to Problem (see doc)
+    See documentation of mean_curvature_problem.MeanCurvatureProblem
     """
 
-    def __init__(self, bounds=[[0., 1.], [0., 1.]], N=256, epsilon=2/256, dt=None,
-                 batch_size=10, batch_shuffle=True, lr=1e-4,
-                 loss_norms=None, loss_power=2.,
-                 radius=[0.05, 0.45], lp=2,
-                 train_N=100, train_steps=1, val_N=200, val_steps=5,
-                 **kwargs):
+    @staticmethod
+    def stability_dt(epsilon):
+        """ Maximum allowed time step that guarantee stability of the scheme """
+        return epsilon**4
 
-        super().__init__(**kwargs)
+    @staticmethod
+    def profil(dist, epsilon):
+        """ Solution profil from distance field """
+        return profil(dist, epsilon)
 
-        # Default values
-        dt = dt or epsilon**4
-        loss_norms = loss_norms or [[2, 1.]]
+    @staticmethod
+    def iprofil(dist, epsilon):
+        """ Distance field from solution profil """
+        return iprofil(dist, epsilon)
 
-        # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters(
-            'bounds', 'N', 'dt', 'epsilon',
-            'batch_size', 'batch_shuffle', 'lr', 'loss_norms', 'loss_power',
-            'radius', 'lp', 'train_N', 'val_N', 'train_steps', 'val_steps',
-        )
+    @staticmethod
+    def sphere_radius(r0, t):
+        """ Time evolution of the radius of the sphere """
+        r0 = torch.as_tensor(r0)
+        t = torch.as_tensor(t)
+        return (r0**4 + 2 * t).max(t.new_zeros(())).pow(1/4)
 
-    @property
-    def domain(self):
-        return Domain(self.hparams.bounds, self.hparams.N, device=self.device)
 
-    def loss(self, output, target):
-        """ Default loss function """
-        dim = tuple(range(2, 2 + self.domain.dim))
-        error = target - output
-        return sum(
-            w * nn_toolbox.norm(error, p, dim).pow(self.hparams.loss_power)
-            for p, w in self.hparams.loss_norms).mean() / torch.tensor(self.domain.N).prod()
-
-        # Below, loss with rescale depending on the solution normal (i.e. the circle size)
-        # The idea was to compensate the less importance of small circle in the final loss
-        # Need a lit more work on the scaling to work good
+    def check_sphere_mass(self, radius=[0.1, 0.2, 0.3, 0.4], num_steps=100, center=None, progress_bar=False):
         """
-        return sum(
-            w * (nn_toolbox.norm(error, p, dim) / nn_toolbox.norm(target, p, dim)).pow(self.hparams.loss_power)
-            for p, w in self.hparams.loss_norms).mean()
-        """
-
-    def check_sphere_volume(self, radius=[0.1, 0.2, 0.3, 0.4], num_steps=100, center=None, progress_bar=False):
-        """
-        Check a Willmore model by measuring sphere volume decreasing
+        Check an Willmore model by measuring sphere volume decreasing
 
         Note: Remember to freeze the model if gradient calculation is not needed!!!
 
-        Parameters
-        ----------
-        radius: float
-            Sphere radius (ratio of domain diameter)
-        num_steps: int
-            Number of time steps. If None, calculate it to reach radius 0.01 * domain diameter
-        center: list of float
-            Sphere center (domain center if None)
-        progress_bar: bool
-            True to display a progress bar
-
-        Returns
-        -------
-        model_volume: torch.tensor
-            Sphere volume evolution for the given model
-        exact_volume: torch.tensor
-            Sphere volume evolution of the solution
+        See documentation of MeanCurvatureProblem.check_sphere_volume
         """
-        domain_diameter = min(b[1] - b[0] for b in self.domain.bounds)
-        model_volumes, exact_volumes = [], []
+        return super().check_sphere_mass(radius, num_steps, center, progress_bar)
 
-        for r in radius:
-            r = r * domain_diameter
-            num_steps = num_steps or math.floor((((r + 0.1) * domain_diameter)**4 - r**4) / (2 * self.hparams.dt))
-
-            with torch.no_grad():
-                mv, ev = check_sphere_volume(self, self.domain, r, self.hparams.epsilon, self.hparams.dt, num_steps, center, p=self.hparams.lp, progress_bar=progress_bar)
-                model_volumes.append(mv)
-                exact_volumes.append(ev)
-
-        return torch.cat(model_volumes), torch.cat(exact_volumes)
-
-    def training_step(self, batch, batch_idx):
-        """ Default training step with custom loss function """
-        data, *targets = batch
-        loss = data.new_zeros([])
-        for target in targets:
-            data = self.forward(data)
-            loss += self.loss(data, target)
-        loss /= len(targets)
-
-        return self.dispatch_metrics({'loss': loss})
-
-    def validation_step(self, batch, batch_idx):
-        """ Called at each batch of the validation data """
-        data, *targets = batch
-        loss = data.new_zeros([])
-        for target in targets:
-            data = self(data)
-            loss += self.loss(data, target)
-        loss /= len(targets)
-
-        return {'val_loss': loss}
-
-    def validation_epoch_end(self, outputs):
-        """ Called at epoch end of the validation step (after all batches) """
-        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-
-        # Metric calculation
-        model_volume, exact_volume = self.check_sphere_volume()
-        volume_error = ((model_volume - exact_volume) / exact_volume).norm() / model_volume.numel()
-
-        self.dispatch_metrics({'val_loss': avg_loss, 'metric': volume_error})
-
-    def configure_optimizers(self):
-        """ Default optimizer """
-        return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
-
-    def prepare_data(self):
-        """ Prepare training and validation data """
-
-        # Additionnal dimensions for appropriate broadcasting
-        sup_dims = (1,) + self.domain.dim * (1,)
-
-        # Shape properties
-        domain_diameter = min(b[1] - b[0] for b in self.domain.bounds)
-        radius = [domain_diameter * r for r in self.hparams.radius]
-        center = [0.5 * sum(b) for b in self.domain.bounds]
-
-        def generate_data(num_samples, steps):
-            return tuple(
-                profil(
-                    sphere_dist_MC(
-                        self.domain.X,
-                        radius=torch.linspace(radius[0], radius[1], num_samples).reshape(-1, *sup_dims),
-                        center=center,
-                        t=i*self.hparams.dt,
-                        p=self.hparams.lp),
-                    self.hparams.epsilon)
-                for i in range(steps + 1))
-
-        # Training dataset
-        train_x, *train_y = generate_data(self.hparams.train_N, self.hparams.train_steps)
-        self.train_dataset = TensorDataset(train_x, *train_y)
-
-        # Validation dataset
-        val_x, *val_y = generate_data(self.hparams.val_N, self.hparams.val_steps)
-        self.val_dataset = TensorDataset(val_x, *val_y)
-
-    def train_dataloader(self):
-        """ Returns the training data loader """
-        return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size or len(self.train_dataset), shuffle=self.hparams.batch_shuffle)
-
-    def val_dataloader(self):
-        """ Returns the validation data loader """
-        return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size or len(self.val_dataset))
-
-    @staticmethod
-    def add_model_specific_args(parent_parser, defaults={}):
-        # Parser for the domain bounds
-        import re
-        def bounds_parser(s):
-            bounds = []
-            per_dim = s.split('x')
-            for dim_spec in per_dim:
-                match = re.fullmatch(r'\s*\[([^\]]*)\]\s*', dim_spec)
-                if not match:
-                    raise ValueError(f"Invalid bound specification {dim_spec}")
-                bounds.append([float(b) for b in match.group(1).split(',')])
-            return bounds
-
-        # Parser for loss definition
-        def float_or_str(v):
-            try:
-                return float(v)
-            except ValueError:
-                return v
-
-        # Parser for lp norm
-        def int_or_float(v):
-            try:
-                return int(v)
-            except ValueError:
-                return float(v)
-
-        from distutils.util import strtobool
-
-        parser = Problem.add_model_specific_args(parent_parser, defaults)
-        group = parser.add_argument_group("Willmore problem", "Options common to all models of Willmore equation.")
-        group.add_argument('--bounds', type=bounds_parser, default=[[0., 1.],[0., 1.]], help="Domain bounds in format like '[0, 1]x[1, 2.5]'")
-        group.add_argument('--N', type=int, nargs='+', default=256, help="Domain discretization")
-        group.add_argument('--epsilon', type=float, default=2/8**3, help="Interface sharpness")
-        group.add_argument('--dt', type=float, default=None, help="Time step (epsilon**2 if None)")
-        group.add_argument('--train_N', type=int, default=100, help="Number of initial conditions in the training dataset")
-        group.add_argument('--val_N', type=int, default=200, help="Number of initial conditions in the validation dataset")
-        group.add_argument('--train_steps', type=int, default=1, help="Number of evolution steps in the training dataset")
-        group.add_argument('--val_steps', type=int, default=10, help="Number of evolution steps in the validation dataset")
-        group.add_argument('--radius', type=float, nargs=2, default=[0.05, 0.45], help="Bounds on sphere radius (ratio of domain bounds) used for training and validation dataset.")
-        group.add_argument('--lp', type=int_or_float, default=2, help="Power of the lp-norm used to define the spheres for training and validation dataset.")
-        group.add_argument('--batch_size', type=int, default=10, help="Size of batch")
-        group.add_argument('--batch_shuffle', type=lambda v: bool(strtobool(v)), nargs='?', const=True, help="Shuffle batch")
-        group.add_argument('--lr', type=float, default=1e-3, help="Learning rate")
-        group.add_argument('--loss_norms', type=float_or_str, nargs=2, action='append', help="List of (p, weight). Compose loss as sum of weight * (output - target).norm(p).pow(e). Default to l2 norm. Exponent e is defined with loss_power parameter.")
-        group.add_argument('--loss_power', type=float, default=2., help="Power applied to each loss term (for regularization purpose)")
-        group.set_defaults(**{**get_default_args(WillmoreProblem), **defaults})
-
-        return parser
-
-
-###############################################################################
-# Command-line interface
-###############################################################################
-
-if __name__ == "__main__":
-
-    from willmore_problem import sphere_dist_MC
-    from problem import Problem
-    import shapes
-    import visu
-    import phase_field as pf
-    import argparse
-    import imageio
-    import torch
-    import tqdm
-    import math
-    from functools import reduce
-    from distutils.util import strtobool
-
-    # Command-line arguments
-    parser = argparse.ArgumentParser(
-        description="Circles evolution compared to the solution of the Willmore flow",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("checkpoint", type=str, help="Path to the model's checkpoint")
-    parser.add_argument("--no_save", action="store_true", help="Don't save the animation")
-    parser.add_argument("--tol", type=float, default=1e-5, help="Tolerance used as a stop criteron")
-    parser.add_argument("--max_it", type=int, default=-1, help="Maximum number of calculated iterations (-1 for illimited")
-    parser.add_argument("--max_frames", type=int, default=-1, help="Maximum number of rendered frames (-1 for illimited)")
-    parser.add_argument("--max_duration", type=float, default=-1, help="Maximum duration of the animation (-1 for illimited")
-    parser.add_argument("--no_dist", action="store_true", help="Display phase field instead of distance")
-    parser.add_argument("--scale", type=float, default=1., help="Initial shape scale")
-    parser.add_argument("--shape", type=str, choices=["one", "two", "three"], default="one", help="Initial shape")
-    parser.add_argument("--offscreen", action="store_true", help="Don't display the animation (but still saving")
-    parser.add_argument("--gpu", action="store_true", help="Evaluation model on your GPU")
-    parser.add_argument("--display_step", type=int, default=1, help="Render frame every given number")
-    parser.add_argument("--fps", type=int, default=25, help="Frame per second in the saved animation")
-    parser.add_argument("--figsize", type=int, default=[6, 6], nargs=2, help="Figure size in inches")
-    parser.add_argument("--revert", type=lambda s:bool(strtobool(s)), nargs='?', const=True, default=False, help="Revert inside and outside of the phase")
-
-    args = parser.parse_args()
-
-    if args.max_duration < 0.:
-        args.max_duration = float('inf')
-
-    # Matplotlib rendering backend
-    if args.offscreen:
-        import matplotlib as mpl
-        mpl.use('Agg')
-    import matplotlib.pyplot as plt
-
-    # Loading model
-    model = Problem.load_from_checkpoint(args.checkpoint, map_location=torch.device("cpu"))
-    model.freeze()
-
-    if args.gpu:
-        model.cuda()
-
-    domain = model.domain
-
-    # Defining initial shape
-    bounds = domain.bounds
-    domain_extent = [b[1] - b[0] for b in bounds]
-    domain_diameter = min(domain_extent)
-
-    def radius(r, scale):
-        return scale * r * domain_diameter
-
-    def pos(X, scale):
-        #return [b[0] + (0.5 + scale * (x - 0.5)) * (b[1] - b[0]) for x, b in zip(X, bounds)]
-        return [b[0] + x * (b[1] - b[0]) for x, b in zip(X, bounds)]
-
-    # Shape
-    if args.shape == "one":
-        spheres = [(0.3, 0.5, 0.5)]
-
-    elif args.shape == "two":
-        spheres = [(0.1, 0.2, 0.2), (0.2, 0.7, 0.7)]
-
-    elif args.shape == "three":
-        spheres = [(0.1, 0.2, 0.2), (0.2, 0.3, 0.7), (0.05, 0.7, 0.3)]
-
-    s = shapes.union(*(shapes.sphere(radius(p[0], args.scale), pos(p[1:], args.scale)) for p in spheres))
-    dist_sol = lambda t: reduce(torch.min, [sphere_dist_MC(domain.X, radius(p[0], args.scale), t, pos(p[1:], args.scale)) for p in spheres])
-
-    # Periodizing
-    s = shapes.periodic(s, bounds)
-
-    # Phase field
-    u = pf.profil(s(*domain.X), model.hparams.epsilon)
-    if args.revert:
-        u = 1. - u
-
-    # Graph
-    scale = 0.25 * max(b[1] - b[0] for b, n in zip(domain.bounds, domain.N))
-    extent = [*domain.bounds[0], *domain.bounds[1]]
-    interpolation = "kaiser"
-
-    plt.figure(figsize=args.figsize)
-
-    if args.no_dist:
-        def data_from(u):
-            return u.cpu()
-        graph = visu.PhaseFieldShow(data_from(u), extent=extent, interpolation=interpolation)
-    else:
-        def data_from(u):
-            return pf.iprofil(u, model.hparams.epsilon).cpu()
-        graph = visu.DistanceShow(data_from(u), scale=scale, extent=extent, interpolation=interpolation)
-
-    contour = visu.ContourShow(dist_sol(0.).cpu(), [0.], X=[x.cpu() for x in domain.X], colors='red')
-
-    title = plt.title(f"t = 0 ; it = 0")
-    plt.tight_layout()
-    plt.pause(1)
-
-    with visu.AnimWriter('anim.avi', fps=args.fps, do_nothing=args.no_save) as anim:
-
-        for i in range(25):
-            anim.add_frame()
-
-        last_diff = [args.tol + 1] * 25
-
-        with tqdm.tqdm() as pbar:
-            while max(last_diff) > args.tol and pbar.n != args.max_it and pbar.n != args.max_frames * args.display_step and pbar.n / args.display_step / args.fps < args.max_duration:
-                last_u = u.clone()
-                u = model(u[None, None, ...])[0, 0, ...]
-
-                if pbar.n % args.display_step == 0:
-                    graph.update(data_from(u))
-                    contour.update(dist_sol(pbar.n * model.hparams.dt).cpu())
-                    title.set_text(f"t = {pbar.n*model.hparams.dt:.5} ; it = {pbar.n}")
-                    plt.pause(0.01)
-
-                    anim.add_frame()
-
-                vol = model.domain.dX.prod() * u.sum()
-                last_diff[1:] = last_diff[:-1]
-                last_diff[0] = (u - last_u).norm().item()
-
-                pbar.update(1)
-                pbar.set_postfix({
-                    'volume': vol.item(),
-                    'diff': last_diff[0],
-                    'max diff': max(last_diff),
-                    't': pbar.n * model.hparams.dt,
-                    'frames': pbar.n // args.display_step,
-                    'duration': pbar.n / args.display_step / args.fps,
-                })
 
