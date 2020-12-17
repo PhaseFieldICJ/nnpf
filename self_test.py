@@ -18,6 +18,7 @@ modules = [
     'reaction_problem',
     'heat_problem',
     'heat_array_model',
+    'mean_curvature_problem',
     'allen_cahn_problem',
     'allen_cahn_splitting',
     'willmore_problem',
