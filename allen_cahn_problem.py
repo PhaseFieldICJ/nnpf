@@ -39,7 +39,7 @@ class ACSphereDataset(TensorDataset):
     """
     Dataset of spheres for Allen-Cahn problem (non-lazy version).
 
-    See documentation of AllenCahnLazyDataset
+    See documentation of ACSphereLazyDataset
     """
     def __init__(self, *args, **kwargs):
         ds = ACSphereLazyDataset(*args, **kwargs)

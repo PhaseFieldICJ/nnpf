@@ -23,6 +23,30 @@ def check_sphere_mass(*args, **kwargs):
     return mcp.check_sphere_volume(WillmoreProblem.sphere_radius, WillmoreProblem.profil, *args, **kwargs)
 
 
+class WillmoreSphereLazyDataset(mcp.MCSphereLazyDataset):
+    """
+    Dataset of spheres for Willmore problem, with samples generated at loading.
+
+    See documentation of mean_curvature_problem.MCSphereLazyDataset
+    """
+    def __init__(self, X, radius, center, epsilon, dt, lp=2, steps=1, reverse=False):
+        super().__init__(
+            WillmoreProblem.sphere_dist,
+            WillmoreProblem.profil,
+            X, radius, center, epsilon, dt, lp, steps, reverse)
+
+
+class WillmoreSphereDataset(TensorDataset):
+    """
+    Dataset of spheres for Willmore problem (non-lazy version).
+
+    See documentation of WillmoreSphereLazyDataset
+    """
+    def __init__(self, *args, **kwargs):
+        ds = WillmoreSphereLazyDataset(*args, **kwargs)
+        super().__init__(*ds[:])
+
+
 class WillmoreProblem(mcp.MeanCurvatureProblem):
     """
     Base class for the Willmore equation problem
