@@ -65,7 +65,7 @@ def check_sphere_mass(sphere_radius, profil, model, domain, r0, epsilon, dt, num
     radiuses = []
     step = 0
     while num_steps is None or step < num_steps:
-        radius = sphere_radius(r0, torch.range(step, step + (num_steps or 100) + 1))
+        radius = sphere_radius(r0, dt * torch.arange(step, step + (num_steps or 100) + 1))
         inbound_mask = torch.logical_and(epsilon < radius, radius < domain_diameter / 2 - epsilon)
         radiuses.append(radius[inbound_mask])
         step += radiuses[-1].numel()
