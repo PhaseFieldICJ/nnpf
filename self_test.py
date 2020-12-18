@@ -22,6 +22,7 @@ modules = [
     'allen_cahn_problem',
     'allen_cahn_splitting',
     'willmore_problem',
+    'steiner_problem',
     'exp_willmore_parallel',
     'model_infos',
 ]
