@@ -227,7 +227,7 @@ class Trainer(pl.Trainer):
     >>> trainer = Trainer.from_argparse_args(args)
 
     Checking:
-    >>> model_checkpoint = next(c for c in trainer.callbacks if type(c).__name__ == "ModelCheckpoint")
+    >>> model_checkpoint = trainer.checkpoint_callback
     >>> model_checkpoint.monitor
     'hp_metric'
     >>> model_checkpoint.save_top_k
@@ -245,7 +245,7 @@ class Trainer(pl.Trainer):
     >>> trainer = Trainer(name="DocTest", version="Trainer", default_root_dir="doctest_logs", check_val_every_n_epoch=100, max_epochs=1000)
 
     Checking:
-    >>> model_checkpoint = next(c for c in trainer.callbacks if type(c).__name__ == "ModelCheckpoint")
+    >>> model_checkpoint = trainer.checkpoint_callback
     >>> model_checkpoint.monitor
     'hp_metric'
     >>> model_checkpoint.save_top_k
