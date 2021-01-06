@@ -270,7 +270,7 @@ class Trainer(pl.Trainer):
                 default_root_dir if default_root_dir is not None else "logs",
                 name=name,
                 version=version,
-                default_hp_metric=True,
+                default_hp_metric=False, # hp_metric will be declared after the sanity check, see below
             )
 
         # Checkpointer
@@ -303,12 +303,44 @@ class Trainer(pl.Trainer):
         parser.set_defaults(**{**get_default_args(Trainer), **defaults})
         return parser
 
-
     def train(self):
         # Saving initial state
         path = os.path.join(self.logger.log_dir, "checkpoints")
         os.makedirs(path, exist_ok=True)
         self.save_checkpoint(os.path.join(path, f"epoch={self.current_epoch}.ckpt"))
-
         super().train()
+
+    def on_sanity_check_start(self):
+        """ HACK to have appropriate hp_metric initial value """
+        # Force full validation in sanity check
+        self.num_sanity_val_step = float("inf")
+
+        # Force logging validation results by fainting a normal evaluation
+        self.running_sanity_check = False
+
+        super().on_sanity_check_start()
+
+    def on_sanity_check_end(self):
+        """ HACK to have appropriate hp_metric initial value """
+
+        # Disabing TensorBoardLogger.log_metrics since log_hyperparams
+        # call log_metrics with step always set to 0, leading to a zigzag
+        # in the graph
+        def do_nothing(*args, **kwargs):
+            pass
+        log_metrics = self.logger.log_metrics
+        self.logger.log_metrics = do_nothing
+
+        # Declaring hyper parameters and hp_metric with value calculated
+        # during the sanity check.
+        # Previous call to log_hyperparams from training setup should
+        # do nothing since default_hp_metric has been set to False in
+        # logger initialization (otherwise initial value is -1).
+        self.logger.log_hyperparams(
+            params=self.get_model().hparams,
+            metrics={'hp_metric': self.checkpoint_callback.best_model_score.item()}
+        )
+
+        # Restoring TensorBoard.log_metrics
+        self.logger.log_metrics = log_metrics
 
