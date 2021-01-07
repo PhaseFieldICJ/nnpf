@@ -271,6 +271,7 @@ class Trainer(pl.Trainer):
                 name=name,
                 version=version,
                 default_hp_metric=False, # hp_metric will be declared after the sanity check, see below
+                log_graph=True, # need example_input_array attribute to be set in the model
             )
 
         # Checkpointer
