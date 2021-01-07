@@ -15,8 +15,8 @@ def get_axe_fig(ax=None, fig=None):
 class ImShow:
     """ Show image with right orientation and origin at lower left corner """
     def __init__(self, img, ax=None, fig=None, *args, **kwargs):
-        ax, fig = get_axe_fig(ax, fig)
-        self.graph = ax.imshow(self._get_img(img), origin="lower", *args, **kwargs)
+        self.ax, self.fig = get_axe_fig(ax, fig)
+        self.graph = self.ax.imshow(self._get_img(img), origin="lower", *args, **kwargs)
 
     def update(self, img):
         self.graph.set_array(self._get_img(img))
@@ -52,12 +52,11 @@ class KernelShow(ImShow):
         self.disp_center = disp_center
 
         weight = self._get_weight(weight_or_module)
-        ax, fig = get_axe_fig(ax, fig)
         super().__init__(weight, ax, fig)
 
         if self.disp_center:
-            ax.plot(*weight_center(torch.ones_like(weight)), '+r', markersize=10, markeredgewidth=2, alpha=0.25)
-            self.cross = ax.plot(*weight_center(weight), '+r', markersize=10, markeredgewidth=2)
+            self.ax.plot(*weight_center(torch.ones_like(weight)), '+r', markersize=10, markeredgewidth=2, alpha=0.25)
+            self.cross = self.ax.plot(*weight_center(weight), '+r', markersize=10, markeredgewidth=2)
 
     def update(self, weight_or_module):
         weight = self._get_weight(weight_or_module)
@@ -117,7 +116,7 @@ class DiffusionIsotropyShow:
         self.N = N
 
         X = broadcast_all(*domain.X)
-        self.ax, fig = get_axe_fig(ax, fig)
+        self.ax, self.fig = get_axe_fig(ax, fig)
         self.ax.contour(*X, self.circle, [0.5,], alpha=0.5)
         self.contours = self.ax.contour(*X, self._get_after(operator), [0.5,], linestyles='dashed')
         self.ax.set_aspect('equal')
@@ -148,7 +147,7 @@ class ContourShow:
             def create_contour(data):
                 return self.ax.contour(X[0], X[1], data, levels, **kwargs)
 
-        self.ax, fig = get_axe_fig(ax, fig)
+        self.ax, self.fig = get_axe_fig(ax, fig)
         self.create_contour = create_contour
         self.contours = self.create_contour(data)
 
