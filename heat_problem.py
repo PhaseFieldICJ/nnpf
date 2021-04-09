@@ -321,6 +321,11 @@ class HeatProblem(Problem):
         """
         return Domain(self.hparams.bounds, self.hparams.N, device=self.device)
 
+    @property
+    def example_input_array(self):
+        """ Example of input (for graph generation) """
+        return torch.rand(1, 1, *self.domain.N)
+
     def loss(self, output, target):
         """ Default loss function """
         dim = tuple(range(2, 2 + self.domain.dim))

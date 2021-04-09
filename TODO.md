@@ -22,3 +22,5 @@
 - remove utils functions from trainer
 - epoch=#-v#.ckpt ?! (collide with auto saving initial state in trainer.Trainer)
 - common animation script or functions
+- animation features for `allen_cahn_problem`
+- a hparams.yaml is written in `default_root_dir` ?!

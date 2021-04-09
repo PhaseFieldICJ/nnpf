@@ -121,6 +121,11 @@ class ReactionProblem(Problem):
         # Hyper-parameters (used for saving/loading the module)
         self.save_hyperparameters('dt', 'epsilon', 'margin', 'Ntrain', 'Nval', 'batch_size', 'batch_shuffle', 'lr')
 
+    @property
+    def example_input_array(self):
+        """ Example of input (for graph generation) """
+        return torch.rand(1, 1, 10, 10)
+
     def loss(self, output, target):
         """ Default loss function """
         return torch.nn.functional.mse_loss(output, target)
