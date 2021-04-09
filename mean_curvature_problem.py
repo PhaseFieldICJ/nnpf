@@ -361,7 +361,7 @@ class MeanCurvatureProblem(Problem):
         super().__init__(**kwargs)
 
         # Default values
-        dt = dt or self.stability_dt(epsilon**2)
+        dt = dt or self.stability_dt(epsilon)
         loss_norms = loss_norms or [[2, 1.]]
 
         # Hyper-parameters (used for saving/loading the module)
