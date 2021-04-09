@@ -351,10 +351,10 @@ class TensorBoardScalars:
             Wall time of each sample
         rel_time: numpy.ndarray
             Relative time (to first event's timestamp) of each sample
-        value: numpy.ndarray
-            Value of each sample
         step: numpy.ndarray
             Step of each sample
+        value: numpy.ndarray
+            Value of each sample
         """
         wall_time, step, value = map(lambda d: np.asarray(d), zip(*self.events.Scalars(name)))
         rel_time = wall_time - self.events.FirstEventTimestamp()
