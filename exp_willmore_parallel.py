@@ -45,11 +45,11 @@ class WillmoreParallel(Problem):
                  kernel_size=17, kernel_init='zeros',
                  reaction_layers=[8, 3], reaction_activation='GaussActivation',
                  input_linear=False, input_bias=False, # LinearChannels before the Parallel
-                 output_linear=True, output_bias=True, # LinearChannels after the Parallel (needed if depth > 1)
+                 output_linear=True, output_bias=True, # LinearChannels after the Parallel (needed if last depth > 1)
                  **kwargs):
         super().__init__(**kwargs)
 
-        assert output_linear or depth == 1, "Output LinearChannels is mandatory if depth > 1"
+        assert output_linear or scheme_layers[-1] == 1, "Output LinearChannels is mandatory if last depth > 1"
 
         # Fix kernel size to match domain dimension
         if isinstance(kernel_size, int):
