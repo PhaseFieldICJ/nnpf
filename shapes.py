@@ -51,7 +51,7 @@ import functools
 ###############################################################################
 # Tools
 
-def norm(X, p=2):
+def norm(X, p=2, weights=None):
     """
     Vector lp norm
 
@@ -64,7 +64,12 @@ def norm(X, p=2):
         Iterable over vector components
     p: int, float or inf
         p of the l-p norm
+    weights: iterable of flaot
+        scaling divider for each coordinate
     """
+    if weights is not None:
+        X = [x / w for x, w in zip(X, weights)]
+
     if p == float("inf"):
         return functools.reduce(
             lambda x, y: torch.max(x, y), # prefer torch.maximum in PyTorch 1.7
@@ -78,23 +83,23 @@ def norm(X, p=2):
 ###############################################################################
 # Shapes
 
-def dot(p=2):
+def dot(p=2, weights=None):
     """ Signed lp distance to a dot """
     def dist(*X):
-        return norm(X, p)
+        return norm(X, p, weights)
 
     return dist
 
-def sphere(radius, center=None, p=2):
+def sphere(radius, center=None, p=2, weights=None):
     """ Signed distance to a sphere """
     if center is None:
-        return rounding(dot(p), radius)
+        return rounding(dot(p, weights), radius)
     else:
-        return translation(sphere(radius, p=p), center)
+        return translation(sphere(radius, p=p, weights=weights), center)
 
-def box(sizes, p=2):
+def box(sizes, p=2, weights=None):
     """ Signed distance to a box """
-    return elongate(dot(p), sizes)
+    return elongate(dot(p, weights), sizes)
 
 def half_plane(dim_or_normal, pt_or_shift=0., normalize=False):
     """
