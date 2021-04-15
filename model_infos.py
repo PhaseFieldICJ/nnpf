@@ -4,7 +4,7 @@ Display information about a model
 """
 
 
-def display_model_infos(model_or_path, recursive=True):
+def display_model_infos(model_or_path, recursive=True, use_torch_info=True, input_size=None, batch_size=None, depth=4, verbose=1):
     """
     Display the informations about a model
 
@@ -14,6 +14,16 @@ def display_model_infos(model_or_path, recursive=True):
         The model or the path to a checkpoint
     recursive: bool
         If True, search for checkpoint in the hyper-parameters and display associated infos.
+    use_torch_info: bool
+        If True, display detailed informations and memory usage using torchinfo package.
+    input_size: None or list of int
+        Input size for calculating memory usage. If None, use example_input_array shape if available.
+    batch_size: None or int
+        Overwrite batch size in input_size (first dimension).
+    depth: int
+        Number of nested layers to traverse for detailed informations.
+    verbose: int
+        Verbose level of torchinfo.summary.
 
     Examples
     --------
@@ -88,6 +98,30 @@ Model summary:
     print("Model hyper parameters:")
     for key, value in model.hparams.items():
         print(f"    {key}: {value}")
+    print()
+
+    if use_torch_info:
+        print("Details and memory usage:")
+        try:
+            from torchinfo import summary
+
+            if input_size is None:
+                try:
+                    input_size = list(model.example_input_array.shape)
+                except AttributeError:
+                    pass
+
+            if batch_size is not None and input_size is not None:
+                input_size[0] = batch_size
+            
+            if input_size is not None:
+                print(f"Input shape: {input_size}")
+
+            summary(model, input_size=input_size, depth=depth, verbose=verbose)
+            print()
+
+        except ModuleNotFoundError:
+                print("Package torchinfo not installed: missing detailed informations and memory usage!")
 
     if recursive:
         for key, value in model.hparams.items():
@@ -107,7 +141,6 @@ Model summary:
                         display_model_infos(v, recursive)
 
 
-
 if __name__ == "__main__":
 
     import argparse
@@ -116,7 +149,20 @@ if __name__ == "__main__":
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('checkpoint', type=str, help="Path to the model's checkpoint")
     parser.add_argument('--recursive', type=lambda v: bool(int(v)), default=True, help="Display informations about checkpoint founds in hyper-parameters")
+    parser.add_argument('--use_torch_info', type=lambda v: bool(int(v)), default=True, help="Display detailed informations and memory usage using torchinfo package")
+    parser.add_argument('--input_size', type=lambda v: [int(s) for s in v.split(',')], default=None, help="Input size for calculating memory usage. Example: 1,1,256,256. If None, use example_input_array shape if available.")
+    parser.add_argument('--batch_size', type=int, default=None, help="Overwrite batch size in input size")
+    parser.add_argument('--depth', type=int, default=4, help="Number of nested layers to traverse for detailed informations")
+    parser.add_argument('--verbose', type=int, default=1, help="Verbose level of torchinfo.summary")
     args = parser.parse_args()
 
-    display_model_infos(args.checkpoint, args.recursive)
+    display_model_infos(
+        args.checkpoint,
+        args.recursive,
+        use_torch_info=args.use_torch_info,
+        input_size=args.input_size,
+        batch_size=args.batch_size,
+        depth=args.depth,
+        verbose=args.verbose,
+    )
 
