@@ -47,6 +47,7 @@ tensor([[ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571],
 
 import torch
 import functools
+import math
 
 ###############################################################################
 # Tools
@@ -96,6 +97,81 @@ def sphere(radius, center=None, p=2, weights=None):
         return rounding(dot(p, weights), radius)
     else:
         return translation(sphere(radius, p=p, weights=weights), center)
+
+def ellipse(radius):
+    """ Signed distance to an ellipse (2D only)
+
+    Source: https://iquilezles.org/www/articles/ellipsedist/ellipsedist.htm
+
+    Doesn't work well due to loss of precision during computation aroung the axe of the great radius.
+    """
+
+    def msign(v):
+        s = torch.empty_like(v)
+        mask = v < 0.
+        s[mask] = -1.
+        s[~mask] = 1.
+        return s
+
+    def dist(*X):
+        assert len(radius) == 2 and len(X) == 2, "Signed distance to an ellipse is defined in 2D only!"
+
+        a, b = radius
+        # Symmetries
+        X = [torch.abs(x) for x in X]
+        if a > b:
+            X = X[::-1]
+            a, b = b, a
+
+        l = b**2 - a**2
+        m = a * X[0] / l
+        n = b * X[1] / l
+        n2 = n**2
+        m2 = m**2
+
+        c = (m2 + n2 - 1.) / 3.
+        c3 = c**3
+
+        d = c3 + m2 * n2
+        q = d + m2 * n2
+        g = m + m * n2
+
+        co = torch.empty_like(X[0])
+
+        # if d < 0
+        mask = d < 0.
+        h = torch.acos(torch.clamp(q[mask] / c3[mask], max=1.)) / 3.
+        s = torch.cos(h) + 2.
+        t = torch.sin(h) * math.sqrt(3.)
+        rx = torch.sqrt(m2[mask] - c[mask] * (s + t))
+        ry = torch.sqrt(m2[mask] - c[mask] * (s - t))
+        co[mask] = ry + math.copysign(1, l) * rx + torch.abs(g[mask]) / (rx * ry)
+
+        # if d >= 0
+        mask = ~mask
+        h = 2. * m[mask] * n[mask] * torch.sqrt(d[mask])
+        s = msign(q[mask] + h) * (q[mask] + h).abs().pow(1/3)
+        t = msign(q[mask] - h) * (q[mask] - h).abs().pow(1/3)
+        rx = - (s + t) - c[mask] * 4. + 2. * m2[mask]
+        #ry = (s - t) * math.sqrt(3.)
+        ry = torch.clamp(2*h - 3*s*s*t + 3*s*t*t, min=0.)**(1/3) * math.sqrt(3.)
+        rm = torch.sqrt(rx**2 + ry**2)
+        co[mask] = ry / torch.sqrt(rm - rx) + 2. * g[mask] / rm
+        #print("s = ", s)
+        #print("t = ", t)
+        #print("rx = ", rx)
+        #print("ry = ", ry)
+        #print("h = ", h)
+        #print("n = ", n[mask])
+        #print("ryy = ", torch.clamp(2*h - 3*s*s*t + 3*s*t*t, min=0.)**(1/3) * math.sqrt(3.))
+
+        co = (co - m) / 2.
+        si = torch.sqrt(torch.clamp(1. - co**2, min=0.))
+        r = [a * co, b * si]
+        return torch.sqrt((r[0] - X[0])**2 + (r[1] - X[1])**2) * msign(X[1] - r[1])
+
+    return dist
+
 
 def box(sizes, p=2, weights=None):
     """ Signed distance to a box """
