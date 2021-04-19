@@ -100,26 +100,26 @@ class ReactionProblem(Problem):
         Time step. epsilon**2 if None.
     margin: float
         Expanding length of the sampled [0, 1] interval
-    Ntrain: int
+    train_N: int
         Number of samples for the training step
-    Nval: int
-        Number of samples for the validation step. 10*Ntrain if None.
+    val_N: int
+        Number of samples for the validation step. 10*train_N if None.
     batch_size: int
         Size of the batch during training and validation steps. Full data if None.
     lr: float
         Learning rate of the optimizer
     """
 
-    def __init__(self, epsilon=2/2**8, dt=None, margin=0.1, Ntrain=100, Nval=None, batch_size=10, batch_shuffle=True, lr=1e-3, **kwargs):
+    def __init__(self, epsilon=2/2**8, dt=None, margin=0.1, train_N=100, val_N=None, batch_size=10, batch_shuffle=True, lr=1e-3, **kwargs):
 
         super().__init__(**kwargs)
 
         # Default values
         dt = dt or epsilon**2
-        Nval = Nval or 10 * Ntrain
+        val_N = val_N or 10 * train_N
 
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('dt', 'epsilon', 'margin', 'Ntrain', 'Nval', 'batch_size', 'batch_shuffle', 'lr')
+        self.save_hyperparameters('dt', 'epsilon', 'margin', 'train_N', 'val_N', 'batch_size', 'batch_shuffle', 'lr')
 
     @property
     def example_input_array(self):
@@ -143,8 +143,8 @@ class ReactionProblem(Problem):
 
     def prepare_data(self):
         """ Prepare training and validation data """
-        self.train_dataset = ReactionDataset(self.hparams.Ntrain, self.hparams.epsilon, self.hparams.dt, self.hparams.margin)
-        self.val_dataset = ReactionDataset(self.hparams.Nval, self.hparams.epsilon, self.hparams.dt, self.hparams.margin)
+        self.train_dataset = ReactionDataset(self.hparams.train_N, self.hparams.epsilon, self.hparams.dt, self.hparams.margin)
+        self.val_dataset = ReactionDataset(self.hparams.val_N, self.hparams.epsilon, self.hparams.dt, self.hparams.margin)
 
     def train_dataloader(self):
         """ Returns the training data loader """
@@ -174,8 +174,8 @@ class ReactionProblem(Problem):
         group.add_argument('--epsilon', type=float, help="Interface sharpness")
         group.add_argument('--dt', type=float, help="Time step (epsilon**2 if None)")
         group.add_argument('--margin', type=float, help="[0, 1] expansion length")
-        group.add_argument('--Ntrain', type=int, help="Size of the training dataset")
-        group.add_argument('--Nval', type=int, help="Size of the validation dataset (10*Ntrain if None)")
+        group.add_argument('--train_N', type=int, help="Size of the training dataset")
+        group.add_argument('--val_N', type=int, help="Size of the validation dataset (10*train_N if None)")
         group.add_argument('--batch_size', type=int, help="Size of batch")
         group.add_argument('--batch_shuffle', type=lambda v: bool(strtobool(v)), nargs='?', const=True, help="Shuffle batch")
         group.add_argument('--lr', type=float, help="Learning rate")

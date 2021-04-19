@@ -282,7 +282,7 @@ class HeatProblem(Problem):
     train_N: int
         Number of samples for the training step
     val_N: int
-        Number of samples for the validation step. 10*Ntrain if None.
+        Number of samples for the validation step. 10*train_N if None.
     batch_size: int
         Size of the batch during training and validation steps. Full data if None.
     batch_shuffle: bool

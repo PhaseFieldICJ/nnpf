@@ -28,7 +28,7 @@ def display_model_infos(model_or_path, recursive=True, use_torch_info=True, inpu
     Examples
     --------
     >>> import os
-    >>> display_model_infos(os.path.join('logs_doctest', 'Reaction', 'test0')) # doctest:+ELLIPSIS
+    >>> display_model_infos(os.path.join('logs_doctest', 'Reaction', 'test0'), use_torch_info=False) # doctest:+ELLIPSIS
     <BLANKLINE>
     Model summary:
         class: Reaction
@@ -45,13 +45,14 @@ def display_model_infos(model_or_path, recursive=True, use_torch_info=True, inpu
         dt: 6.103515625e-05
         epsilon: 0.0078125
         margin: 0.1
-        Ntrain: 100
-        Nval: 1000
+        train_N: 10
+        val_N: 20
         batch_size: 10
         batch_shuffle: True
         lr: 0.001
         layer_dims: [8, 3]
         activation: GaussActivation
+    <BLANKLINE>
     """
 
     import nn_toolbox
