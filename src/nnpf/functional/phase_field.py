@@ -4,6 +4,15 @@ Phase Field base functions
 
 import torch
 
+
+__all__ = [
+    "profil",
+    "iprofil",
+    "dprofil",
+    "idprofil",
+]
+
+
 def profil(dist, epsilon):
     """
     Phase-field profil from the given distance field and interface sharpness

@@ -252,19 +252,6 @@ class FFTConvolutionArray(_ConvNd):
         return nn_toolbox.fftconv(x, self.weight, self.bias, self.padding, self.padding_mode)
 
 
-###############################################################################
-# Testing
-
-import numpy as np
-
-def flat_coords_array(*args):
-    """ Flatten and stack array of coordinates (e.g. meshgrid output) """
-    return np.stack(tuple(np.ravel(coords) for coords in args), axis=1)
-
-
-def flat_meshgrid(*args):
-    """ Flatten and stack meshgrid's output to be used as model input """
-    return flat_coords_array(*np.meshgrid(*args))
 
 ###############################################################################
 
