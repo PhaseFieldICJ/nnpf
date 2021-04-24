@@ -4,7 +4,21 @@ import torch
 from torch.nn import Module, ModuleList, Linear, Sequential
 from torch.nn.modules.conv import _ConvNd
 
-import nn_toolbox
+from nnpf.nn.utils import gen_function_layers
+from nnpf.functional import conv
+from nnpf.fft import fftconv
+
+
+__all__ = [
+    "Function",
+    "GaussActivation",
+    "Parallel",
+    "LinearChannels",
+    "ConvolutionArray",
+    "FFTConvolutionArray",
+    "ConvolutionFunction",
+]
+
 
 def Function(m, n, *activation_fn):
     """
@@ -21,7 +35,7 @@ def Function(m, n, *activation_fn):
         Multiple pairs of activation functions and working dimensions for hidden layers
     """
 
-    layers = nn_toolbox.gen_function_layers(m, n, *activation_fn)
+    layers = gen_function_layers(m, n, *activation_fn)
     return torch.nn.Sequential(*layers)
 
 
@@ -183,7 +197,7 @@ class ConvolutionArray(_ConvNd):
 
 
     def forward(self, x):
-        return nn_toolbox.conv(x, self.weight, self.bias, self.stride, self.padding, self.padding_mode, self.dilation, self.groups)
+        return conv(x, self.weight, self.bias, self.stride, self.padding, self.padding_mode, self.dilation, self.groups)
 
 
 class FFTConvolutionArray(_ConvNd):
@@ -249,7 +263,7 @@ class FFTConvolutionArray(_ConvNd):
             False, ntuple(0), 1, bias, padding_mode)
 
     def forward(self, x):
-        return nn_toolbox.fftconv(x, self.weight, self.bias, self.padding, self.padding_mode)
+        return fftconv(x, self.weight, self.bias, self.padding, self.padding_mode)
 
 
 

@@ -2,15 +2,18 @@
 
 import torch
 import torch.nn as nn
-
-
-import nn_models
-import nn_toolbox
-from reaction_problem import ReactionProblem
-from problem import get_default_args
-from trainer import Trainer
-
 import argparse
+
+from nnpf.problems import ReactionProblem
+from nnpf.utils import get_default_args
+from nnpf.trainer import Trainer
+from nnpf.nn import Function, get_model_by_name
+
+
+__all__ = [
+    "Reaction",
+]
+
 
 class Reaction(ReactionProblem):
     """
@@ -54,9 +57,9 @@ class Reaction(ReactionProblem):
         self.save_hyperparameters('layer_dims', 'activation')
 
         # Model
-        activation_class = nn_toolbox.get_model_by_name(self.hparams.activation)
+        activation_class = get_model_by_name(self.hparams.activation)
         layers = ((activation_class(), d) for d in self.hparams.layer_dims)
-        self.model = nn_models.Function(1, 1, *layers)
+        self.model = Function(1, 1, *layers)
 
     def forward(self, x):
         return self.model(x.reshape(-1, 1)).reshape(x.shape)

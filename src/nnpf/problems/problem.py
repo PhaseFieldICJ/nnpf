@@ -5,8 +5,12 @@ Base module and utils for every problem
 import pytorch_lightning as pl
 import argparse
 
-from trainer import get_default_args
+from nnpf.utils import get_default_args, checkpoint_from_path, fix_path
 
+
+__all__ = [
+    "Problem",
+]
 
 class Problem(pl.LightningModule):
     """

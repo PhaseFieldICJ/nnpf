@@ -1,4 +1,8 @@
+import numpy as np # FIXME: PyTorch instead ?!
+
+
 __all__ = ["TensorBoardScalars"]
+
 
 class TensorBoardScalars:
     """ Read scalars from TensorBoard event file

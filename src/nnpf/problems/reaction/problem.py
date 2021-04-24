@@ -4,86 +4,18 @@ Base module and utils for the Allen-Cahn reaction term learning problem.
 """
 
 import torch
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader
 import argparse
 
-from problem import Problem, get_default_args
+from nnpf.utils import get_default_args
+from nnpf.problems import Problem
 
-class ReactionSolution:
-    """
-    Exact solution for the reaction operator of the Allen-Cahn equation
-    """
-
-    def __init__(self, epsilon=2/2**8, dt=None):
-        """ Constructor
-
-        Parameters
-        ----------
-        epsilon: float
-            Interface sharpness in phase field model
-        dt: float
-            Time step. epsilon**2 if None.
-        """
-        self.epsilon = epsilon
-        self.dt = dt or self.epsilon**2
-
-    def __call__(self, u):
-        """ Returns u(t + dt) from u(t) """
-        result = torch.empty_like(u)
-        dt, epsilon = self.dt, self.epsilon
-
-        def helper(u):
-            return torch.as_tensor(-dt / epsilon**2).exp() * u * (1 - u) / (1 - 2 * u)**2
-
-        result[u == 0.5] = 0.5
-
-        a = torch.sqrt(1 + 4 * helper(u[u < 0.5]))
-        result[u < 0.5] = 1 - (a + 1) / (2 * a)
-
-        a = torch.sqrt(1 + 4 * helper(u[u > 0.5]))
-        result[u > 0.5] = (a + 1) / (2 * a)
-
-        return result
+from .datasets import ReactionDataset
 
 
-class ReactionDataset(TensorDataset):
-    """
-    Base dataset for the Allen-Cahn reaction term.
-
-    It is the exact solution for linear spaced samples in the [0, 1] interval
-    with a given external margin.
-
-    Parameters
-    ----------
-    num_samples: int
-        Number of samples in the dataset
-    epsilon: float
-        Interface sharpness in phase field model
-    dt: float
-        Time step.
-    margin: float
-        Expanding length of the sampled [0, 1] interval
-
-    Examples
-    --------
-    >>> dataset = ReactionDataset(13, 1e-2, 1e-4, 0.1)
-    >>> len(dataset)
-    13
-    >>> dataset[1]
-    (tensor([0.]), tensor([0.]))
-    >>> dataset[2]
-    (tensor([0.1000]), tensor([0.0449]))
-    >>> dataset[11]
-    (tensor([1.]), tensor([1.]))
-    """
-
-    def __init__(self, num_samples, epsilon, dt, margin):
-        lower_bound = 0. - margin
-        upper_bound = 1. + margin
-        exact_sol = ReactionSolution(epsilon, dt)
-        train_x = torch.linspace(lower_bound, upper_bound, num_samples)[:, None]
-        train_y = exact_sol(train_x)
-        super().__init__(train_x, train_y)
+__all__ = [
+    "ReactionProblem",
+]
 
 
 class ReactionProblem(Problem):

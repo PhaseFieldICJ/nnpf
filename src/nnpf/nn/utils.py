@@ -1,7 +1,14 @@
 """ Neural-network toolbox """
 
 import torch
-import numpy as np
+
+
+__all__ = [
+    "gen_function_layers",
+    "ndof",
+    "get_model_by_name",
+]
+
 
 def gen_function_layers(m, n, *activation_fn):
     """ Generates the modules of a R^m -> R^n function model
@@ -101,12 +108,21 @@ def get_model_by_name(name):
     except KeyError:
         pass
 
-    # Class defined in nn_models
+    # Class defined in nn
     try:
-        import nn_models
-        return getattr(nn_models, name)
+        import nnpf.nn
+        return getattr(nnpf.nn, name)
     except AttributeError:
         pass
+    
+    # Class defined in models
+    """
+    try:
+        import nnpf.models
+        return getattr(nnpf.models, name)
+    except AttributeError:
+        pass
+    """
 
     # Class defined in PyTorch
     try:

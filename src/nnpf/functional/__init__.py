@@ -1,5 +1,5 @@
 from .heat import *
-from .norm import *
+from .norms import *
 from .operators import *
 from .phase_field import *
 from .utils import *
