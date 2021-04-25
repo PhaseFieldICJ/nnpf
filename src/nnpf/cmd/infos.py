@@ -1,17 +1,16 @@
-#!/usr/bin/env python3
 """
-Display information about a model
+Display informations about a model from a checkpoint
 """
 
+from nnpf.nn import display_model_infos
+
+__all__ = [
+    "add_arguments",
+    "process",
+]
 
 
-
-if __name__ == "__main__":
-
-    import argparse
-    parser = argparse.ArgumentParser(
-            description="Display informations about a model from a checkpoint",
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def add_arguments(parser):
     parser.add_argument('checkpoint', type=str, help="Path to the model's checkpoint")
     parser.add_argument('--recursive', type=lambda v: bool(int(v)), default=True, help="Display informations about checkpoint founds in hyper-parameters")
     parser.add_argument('--use_torch_info', type=lambda v: bool(int(v)), default=True, help="Display detailed informations and memory usage using torchinfo package")
@@ -19,8 +18,11 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=None, help="Overwrite batch size in input size")
     parser.add_argument('--depth', type=int, default=4, help="Number of nested layers to traverse for detailed informations")
     parser.add_argument('--verbose', type=int, default=1, help="Verbose level of torchinfo.summary")
-    args = parser.parse_args()
 
+    return parser
+
+
+def process(args):
     display_model_infos(
         args.checkpoint,
         args.recursive,
