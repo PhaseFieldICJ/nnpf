@@ -37,6 +37,7 @@ def add_action_parser(parser, parents=[], defaults={}, drill=False):
         nargs='?' if drill or 'model' in defaults else None,
         help="Model name",
     )
+    base_parser.add_argument("-i", "--interactive", action="store_true", help="Switch to interactive mode at the end of the script")
 
     # Add config option if not already defined (ugly)
     if all(len([action for action in parent._actions if action.dest == "config"]) == 0 for parent in parents):
@@ -108,4 +109,9 @@ def process(args):
     model = Model(**vars(args))
     trainer = Trainer.from_argparse_args(args)
     trainer.fit(model)
+
+    # Interactive mode
+    if args.interactive:
+        from IPython import embed
+        embed(colors="neutral")
 
