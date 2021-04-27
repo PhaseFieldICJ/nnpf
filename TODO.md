@@ -24,3 +24,4 @@
 - common animation script or functions
 - animation features for `allen_cahn_problem`
 - a hparams.yaml is written in `default_root_dir` ?!
+- `--config` option for nnpf without action specified
