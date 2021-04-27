@@ -27,3 +27,5 @@
 - `--config` option for nnpf without action specified
 - TensorBoardScalar can merge multiple files
 - fix Tracing issues
+- train action populates command-line arguments from class constructor
+
