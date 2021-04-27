@@ -17,7 +17,7 @@ __all__ = [
 
 class Reaction(ReactionProblem):
     """
-    Reaction problem model using a Multiple Layer Percerptron
+    Reaction problem model using a Multiple Layer Perceptron
 
     Parameters
     ----------

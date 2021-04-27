@@ -115,15 +115,13 @@ def get_model_by_name(name):
         return getattr(nnpf.nn, name)
     except AttributeError:
         pass
-    
+
     # Class defined in models
-    """
     try:
         import nnpf.models
         return getattr(nnpf.models, name)
     except AttributeError:
         pass
-    """
 
     # Class defined in PyTorch
     try:
