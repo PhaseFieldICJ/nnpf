@@ -73,20 +73,3 @@ class Reaction(ReactionProblem):
         group.set_defaults(**{**get_default_args(Reaction), **defaults})
         return parser
 
-
-if __name__ == "__main__":
-
-    # Command-line arguments
-    parser = argparse.ArgumentParser(
-        description="Model of the reaction operator of the Allen-Cahn equation",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser = Trainer.add_argparse_args(parser, dict(name="Reaction"))
-    parser = Reaction.add_model_specific_args(parser, Reaction.defaults_from_config())
-    args = parser.parse_args()
-
-    # Model, training & fit
-    model = Reaction(**vars(args))
-    trainer = Trainer.from_argparse_args(args)
-    trainer.fit(model)
-
-

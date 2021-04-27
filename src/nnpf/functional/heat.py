@@ -1,5 +1,5 @@
 import torch
-
+import math
 
 __all__ = [
     "heat_kernel_freq",
