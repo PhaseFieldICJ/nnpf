@@ -99,8 +99,14 @@ def get_model_by_name(name):
     # Name is composed of the module and class name
     if '.' in name:
         import importlib
+        import sys
+        import os
+
         parts = name.split('.')
+        # FIXME: this is ugly
+        sys.path.append(os.getcwd())
         module = importlib.import_module('.'.join(parts[:-1]))
+        sys.path.pop()
         return getattr(module, parts[-1])
 
     # Class available in current global scope

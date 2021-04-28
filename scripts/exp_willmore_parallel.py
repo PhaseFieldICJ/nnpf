@@ -3,13 +3,11 @@
 import torch
 import argparse
 
-from willmore_problem import WillmoreProblem
-from allen_cahn_problem import AllenCahnProblem
-from reaction_model import Reaction
-from heat_array_model import HeatArray
-from problem import get_default_args
-from trainer import Trainer
-from nn_models import Parallel, LinearChannels
+from nnpf.problems import AllenCahnProblem, WillmoreProblem
+from nnpf.models import Reaction, HeatArray
+from nnpf.utils import get_default_args
+from nnpf.trainer import Trainer
+from nnpf.nn import Parallel, LinearChannels
 from torch.nn import Sequential
 
 #Problem = AllenCahnProblem
