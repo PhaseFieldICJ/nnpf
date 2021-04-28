@@ -14,3 +14,4 @@ dependencies:
   - tqdm
   - imageio
   - imageio-ffmpeg
+  - pytest

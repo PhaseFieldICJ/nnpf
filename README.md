@@ -28,25 +28,36 @@ conda env update -f environment_gpu.yml
 ```
 depending on which environment you already have.
 
+**Install** the nnpf module:
+```bash
+pip install .
+```
+
+You can now move in your **working directory**.
+
 **Test** the installation with:
 ```bash
-python3 self_test.py
+nnpf selftest
 ```
 
 **Launch** the learning of the reaction term of the Allen-Cahn equation, with default parameters:
 ```bash
-python3 reaction_model.py --batch_size 10
+nnpf train Reaction --batch_size 10
 ```
 and/or with custom hidden layers:
 ```bash
-python3 reaction_model.py --batch_size 10 --layer_dims 8 8 3 --activation ReLU
+nnpf train Reaction --batch_size 10 --layer_dims 8 8 3 --activation ReLU
 ```
 
 If you have an CUDA compatible GPU, you can speedup the learning by simply adding the `--gpu` option:
 ```bash
-python3 reaction_model.py --batch_size 10 --layer_dims 8 8 3 --activation ReLU --gpu 1
+nnpf train --batch_size 10 --layer_dims 8 8 3 --activation ReLU --gpu 1
 ```
 
+**Check** informations of one trained model:
+```bash
+nnpf infos logs/Reaction/version_0
+```
 
 **Visualize** the loss evolution and compare hyper-parameters using TensorBoard:
 ```bash
