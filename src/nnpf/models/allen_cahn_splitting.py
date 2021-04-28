@@ -28,7 +28,7 @@ class AllenCahnSplitting(AllenCahnProblem):
 
     After launching examples from heat_array_model and reaction_model:
     >>> import os
-    >>> from trainer import Trainer
+    >>> from nnpf.trainer import Trainer
     >>> trainer = Trainer(default_root_dir="logs_doctest", name="AllenCahnSplitting", version="test0", max_epochs=1)
     >>> model = AllenCahnSplitting([os.path.join('logs_doctest', 'HeatArray', 'test0'), os.path.join('logs_doctest', 'Reaction', 'test0')], test_N=10, val_N=20, val_reverse=0.5)
     >>> import contextlib, io
@@ -39,7 +39,7 @@ class AllenCahnSplitting(AllenCahnProblem):
     True
 
     Loading from checkpoint:
-    >>> from problem import Problem
+    >>> from nnpf.problems import Problem
     >>> model = Problem.load_from_checkpoint(os.path.join('logs_doctest', 'AllenCahnSplitting', 'test0'))
     >>> type(model).__name__
     'AllenCahnSplitting'

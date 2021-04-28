@@ -44,16 +44,16 @@ class MCSphereLazyDataset(Dataset):
     --------
 
     # The domain
-    >>> from domain import Domain
+    >>> from nnpf.domain import Domain
     >>> d = Domain([[-1, 1], [-1, 1]], 21)
 
     # Radius evolution and solution profil
-    >>> from allen_cahn_problem import AllenCahnProblem
+    >>> from nnpf.problems import AllenCahnProblem
     >>> sphere_radius = AllenCahnProblem.sphere_radius
     >>> profil = AllenCahnProblem.profil
 
     # Helper
-    >>> import shapes
+    >>> import nnpf.shapes as shapes
     >>> def sphere_dist(X, radius, t, center, p):
     ...     return shapes.sphere(sphere_radius(radius, t), center, p=p)(*X)
     >>> def sol(X, radius, center, epsilon, t, lp=2, reverse=False):
@@ -176,16 +176,16 @@ class MCSphereDataset(TensorDataset):
     --------
 
     # The domain
-    >>> from domain import Domain
+    >>> from nnpf.domain import Domain
     >>> d = Domain([[-1, 1], [-1, 1]], 21)
 
     # Radius evolution and solution profil
-    >>> from allen_cahn_problem import AllenCahnProblem
+    >>> from nnpf.problems import AllenCahnProblem
     >>> sphere_radius = AllenCahnProblem.sphere_radius
     >>> profil = AllenCahnProblem.profil
 
     # Helper
-    >>> import shapes
+    >>> import nnpf.shapes as shapes
     >>> def sphere_dist(X, radius, t, center, p):
     ...     return shapes.sphere(sphere_radius(radius, t), center, p=p)(*X)
     >>> def sol(X, radius, center, epsilon, t, lp=2, reverse=False):

@@ -1,5 +1,6 @@
 import torch
 
+from .operators import diff
 
 __all__ = [
     "total_variation_norm",

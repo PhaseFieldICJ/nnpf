@@ -221,8 +221,8 @@ class DistanceShow(ImShow):
 
     Example
     -------
-    >>> from domain import Domain
-    >>> from shapes import periodic, union, sphere
+    >>> from nnpf.domain import Domain
+    >>> from nnpf.shapes import periodic, union, sphere
     >>> d = Domain([[-1, 1], [-1, 1]], [256, 256])
     >>> s = periodic(union(sphere(0.5, [0, 0]), sphere(0.3, [0.4, 0.3])), d.bounds)
     >>> im = DistanceShow(s, d.X)

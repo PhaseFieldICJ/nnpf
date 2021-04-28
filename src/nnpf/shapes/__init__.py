@@ -5,6 +5,7 @@ Example
 -------
 
 Centered sphere:
+>>> import torch
 >>> X, Y = torch.meshgrid(torch.linspace(0, 1, 5), torch.linspace(0, 1, 5))
 >>> s = sphere(0.25, [0.5, 0.5])
 >>> s(X, Y)

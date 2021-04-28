@@ -169,14 +169,14 @@ def display_model_infos(model_or_path, recursive=True, use_torch_info=True, inpu
         class: Reaction
         problem: ReactionProblem
         ndof: 47
-        checkpoint path: ...
+        checkpoint path: logs_doctest/Reaction/test0/checkpoints/last.ckpt
         epochs: 1
         steps: 1
-        best score: 0
-        best path: 
+        best score: 1.6774380207061768
+        best path: logs_doctest/Reaction/test0/checkpoints/epoch=0-v0.ckpt
     <BLANKLINE>
     Model hyper parameters:
-        seed: None
+        seed: 0
         dt: 6.103515625e-05
         epsilon: 0.0078125
         margin: 0.1
@@ -250,7 +250,7 @@ Model summary:
 
             if batch_size is not None and input_size is not None:
                 input_size[0] = batch_size
-            
+
             if input_size is not None:
                 print(f"Input shape: {input_size}")
 

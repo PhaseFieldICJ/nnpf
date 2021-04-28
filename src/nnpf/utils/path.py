@@ -33,12 +33,17 @@ def checkpoint_from_path(checkpoint_path):
 
     # If path if a folder, found last checkpoint from checkpoints subfolder
     if os.path.isdir(checkpoint_path):
+        dirname = os.path.join(os.path.expanduser(checkpoint_path), r"checkpoints")
+
+        if os.path.exists(os.path.join(dirname, r"last.ckpt")):
+            return os.path.join(dirname, r"last.ckpt")
+
         import glob
         import re
-        glob_expr = os.path.join(os.path.expanduser(checkpoint_path), r"checkpoints", r"epoch=*.ckpt")
+        glob_expr = os.path.join(dirname, r"epoch=*.ckpt")
         checkpoint_list = glob.glob(glob_expr)
         if len(checkpoint_list) > 0:
-            checkpoint_path = sorted(checkpoint_list, key=lambda s: int(re.search(r"epoch=([0-9]+)(-v[0-9]+)?\.ckpt$", s).group(1)))[-1]
+            checkpoint_path = sorted(checkpoint_list, key=lambda s: tuple(int(v) for v in re.search(r"epoch=([0-9]+)(-v([0-9]+))?\.ckpt$", s).group(1, 3) if v is not None))[-1]
 
     return checkpoint_path
 

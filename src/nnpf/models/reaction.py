@@ -32,9 +32,9 @@ class Reaction(ReactionProblem):
     --------
 
     Training:
-    >>> from trainer import Trainer
+    >>> from nnpf.trainer import Trainer
     >>> trainer = Trainer(default_root_dir="logs_doctest", name="Reaction", version="test0", max_epochs=1)
-    >>> model = Reaction(train_N=10, val_N=20)
+    >>> model = Reaction(train_N=10, val_N=20, seed=0)
     >>> import contextlib, io
     >>> with contextlib.redirect_stdout(io.StringIO()):
     ...     with contextlib.redirect_stderr(io.StringIO()):
@@ -44,7 +44,7 @@ class Reaction(ReactionProblem):
 
     Loading from checkpoint:
     >>> import os
-    >>> from problem import Problem
+    >>> from nnpf.problems import Problem
     >>> model = Problem.load_from_checkpoint(os.path.join('logs_doctest', 'Reaction', 'test0'))
     >>> type(model).__name__
     'Reaction'

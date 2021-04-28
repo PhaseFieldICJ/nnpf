@@ -28,6 +28,7 @@ def fftconv(data, weight, bias=None, padding=0, padding_mode='zeros'):
 
     Examples
     --------
+    >>> from nnpf.functional import conv
     >>> weight = torch.tensor([1., 2., 3.]).reshape(1, 1, -1)
     >>> x = torch.arange(10.).reshape(1, 1, -1)
 
