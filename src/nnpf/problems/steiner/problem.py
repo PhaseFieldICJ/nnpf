@@ -1,50 +1,17 @@
-#!/usr/bin/env python3
 """
 Base module and utils for the Steiner learning problem
 """
 
 import torch
-from torch.utils.data import DataLoader, TensorDataset
-import math
+from torch.utils.data import DataLoader
 
-import mean_curvature_problem as mcp
-from domain import Domain
-from phase_field import dprofil, idprofil
-import nn_toolbox
-import shapes
+from nnpf.problems import MeanCurvatureProblem
+from nnpf.functional.phase_field import dprofil, idprofil
 
 
-def check_sphere_mass(*args, **kwargs):
-    """
-    Check a Willmore model by measuring sphere volume decreasing
-
-    See documentation of mean_curvature_problem.check_sphere_volume
-    """
-    return mcp.check_sphere_volume(SteinerProblem.sphere_radius, SteinerProblem.profil, *args, **kwargs)
-
-
-class SteinerSphereLazyDataset(mcp.MCSphereLazyDataset):
-    """
-    Dataset of spheres for Steiner problem, with samples generated at loading.
-
-    See documentation of mean_curvature_problem.MCSphereLazyDataset
-    """
-    def __init__(self, X, radius, center, epsilon, dt, lp=2, steps=1, reverse=False):
-        super().__init__(
-            SteinerProblem.sphere_dist,
-            SteinerProblem.profil,
-            X, radius, center, epsilon, dt, lp, steps, reverse)
-
-
-class SteinerSphereDataset(TensorDataset):
-    """
-    Dataset of spheres for Steiner problem (non-lazy version).
-
-    See documentation of SteinerSphereLazyDataset
-    """
-    def __init__(self, *args, **kwargs):
-        ds = SteinerSphereLazyDataset(*args, **kwargs)
-        super().__init__(*ds[:])
+__all__ = [
+    "SteinerProblem",
+]
 
 
 class SteinerProblem(mcp.MeanCurvatureProblem):
