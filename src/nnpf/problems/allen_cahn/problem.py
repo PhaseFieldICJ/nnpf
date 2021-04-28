@@ -3,50 +3,17 @@ Base module and utils for the Allen-Cahn equation learning problem
 """
 
 import torch
-from torch.utils.data import DataLoader, Dataset, TensorDataset
-import math
 
-import mean_curvature_problem as mcp
-from domain import Domain
-from phase_field import profil, iprofil
-import nn_toolbox
-import shapes
+from nnpf.problems import MeanCurvatureProblem
+from nnpf.functional.phase_field import profil, iprofil
 
 
-def check_sphere_mass(*args, **kwargs):
-    """
-    Check an Allen-Cahn model by measuring the decreasing of the mass of the profil associated to a sphere.
-
-    See documentation of mean_curvature_problem.check_sphere_volume
-    """
-    return mcp.check_sphere_volume(AllenCahnProblem.sphere_radius, AllenCahnProblem.profil, *args, **kwargs)
+__all__ = [
+    "AllenCahnProblem",
+]
 
 
-class ACSphereLazyDataset(mcp.MCSphereLazyDataset):
-    """
-    Dataset of spheres for Allen-Cahn problem, with samples generated at loading.
-
-    See documentation of mean_curvature_problem.MCSphereLazyDataset
-    """
-    def __init__(self, X, radius, center, epsilon, dt, lp=2, steps=1, reverse=False):
-        super().__init__(
-            AllenCahnProblem.sphere_dist,
-            AllenCahnProblem.profil,
-            X, radius, center, epsilon, dt, lp, steps, reverse)
-
-
-class ACSphereDataset(TensorDataset):
-    """
-    Dataset of spheres for Allen-Cahn problem (non-lazy version).
-
-    See documentation of ACSphereLazyDataset
-    """
-    def __init__(self, *args, **kwargs):
-        ds = ACSphereLazyDataset(*args, **kwargs)
-        super().__init__(*ds[:])
-
-
-class AllenCahnProblem(mcp.MeanCurvatureProblem):
+class AllenCahnProblem(MeanCurvatureProblem):
     """
     Base class for the Allen-Cahn equation problem
 
@@ -86,7 +53,6 @@ class AllenCahnProblem(mcp.MeanCurvatureProblem):
         See documentation of MeanCurvatureProblem.check_sphere_volume
         """
         return super().check_sphere_mass(radius, num_steps, center, progress_bar)
-
 
 
 

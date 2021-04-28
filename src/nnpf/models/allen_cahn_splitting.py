@@ -4,11 +4,15 @@ import torch
 from torch.nn import ModuleList
 import argparse
 
-from allen_cahn_problem import AllenCahnProblem
-from problem import Problem, get_default_args
-from heat_problem import HeatProblem
-from reaction_problem import ReactionProblem
-from trainer import Trainer
+from nnpf.problems import Problem, AllenCahnProblem, HeatProblem, ReactionProblem
+from nnpf.utils import get_default_args
+from nnpf.trainer import Trainer
+
+
+__all__ = [
+    "AllenCahnSplitting",
+]
+
 
 class AllenCahnSplitting(AllenCahnProblem):
     """
@@ -112,23 +116,6 @@ class AllenCahnSplitting(AllenCahnProblem):
         group.add_argument('checkpoints', type=str, nargs='*', help="Path to the model's checkpoint")
         group.set_defaults(**{**get_default_args(AllenCahnSplitting), **defaults})
         return parser
-
-
-if __name__ == "__main__":
-
-    # Command-line arguments
-    parser = argparse.ArgumentParser(
-        description="Model of the Allen-Cahn equation using splitting",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser = Trainer.add_argparse_args(parser, dict(name="AllenCahnSplitting"))
-    parser = AllenCahnSplitting.add_model_specific_args(parser, AllenCahnSplitting.defaults_from_config())
-    args = parser.parse_args()
-
-    # Model, training & fit
-    model = AllenCahnSplitting(**vars(args))
-    trainer = Trainer.from_argparse_args(args)
-    trainer.fit(model)
-
 
 
 

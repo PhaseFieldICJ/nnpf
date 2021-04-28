@@ -6,8 +6,6 @@ Base module and utils for the Heat equation problem
 
 import torch
 from torch.utils.data import DataLoader
-import math
-import argparse
 
 from nnpf.utils import get_default_args
 from nnpf.problems import Problem
