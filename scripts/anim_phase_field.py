@@ -2,17 +2,17 @@
 """
 Draft script that save animation of a model applied to a phase field function
 """
-
-from problem import Problem
-import shapes
-import visu
-import phase_field as pf
 import argparse
 import imageio
 import torch
 import tqdm
 import math
 from distutils.util import strtobool
+
+from nnpf.problems import Problem
+import nnpf.shapes as shapes
+import nnpf.visu as visu
+import nnpf.functional.phase_field as pf
 
 # Command-line arguments
 parser = argparse.ArgumentParser(
