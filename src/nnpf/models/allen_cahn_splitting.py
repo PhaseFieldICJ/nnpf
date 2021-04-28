@@ -26,11 +26,29 @@ class AllenCahnSplitting(AllenCahnProblem):
     Examples
     --------
 
+    Training reaction and heat model:
+    >>> from nnpf.models import Reaction, HeatArray
+    >>> from nnpf.trainer import Trainer
+
+    >>> trainer = Trainer(default_root_dir="logs_doctest", name="Reaction", version="test_splitting", max_epochs=1)
+    >>> model = Reaction(train_N=10, val_N=20, seed=0)
+    >>> import contextlib, io
+    >>> with contextlib.redirect_stdout(io.StringIO()):
+    ...     with contextlib.redirect_stderr(io.StringIO()):
+    ...         trainer.fit(model)
+
+    >>> trainer = Trainer(default_root_dir="logs_doctest", name="HeatArray", version="test_splitting", max_epochs=1)
+    >>> model = HeatArray(N=64, train_N=10, val_N=20)
+    >>> import contextlib, io
+    >>> with contextlib.redirect_stdout(io.StringIO()):
+    ...     with contextlib.redirect_stderr(io.StringIO()):
+    ...         trainer.fit(model)
+
     After launching examples from heat_array_model and reaction_model:
     >>> import os
     >>> from nnpf.trainer import Trainer
-    >>> trainer = Trainer(default_root_dir="logs_doctest", name="AllenCahnSplitting", version="test0", max_epochs=1)
-    >>> model = AllenCahnSplitting([os.path.join('logs_doctest', 'HeatArray', 'test0'), os.path.join('logs_doctest', 'Reaction', 'test0')], test_N=10, val_N=20, val_reverse=0.5)
+    >>> trainer = Trainer(default_root_dir="logs_doctest", name="AllenCahnSplitting", version="test_splitting", max_epochs=1)
+    >>> model = AllenCahnSplitting([os.path.join('logs_doctest', 'HeatArray', 'test_splitting'), os.path.join('logs_doctest', 'Reaction', 'test_splitting')], test_N=10, val_N=20, val_reverse=0.5)
     >>> import contextlib, io
     >>> with contextlib.redirect_stdout(io.StringIO()):
     ...     with contextlib.redirect_stderr(io.StringIO()):
@@ -40,7 +58,7 @@ class AllenCahnSplitting(AllenCahnProblem):
 
     Loading from checkpoint:
     >>> from nnpf.problems import Problem
-    >>> model = Problem.load_from_checkpoint(os.path.join('logs_doctest', 'AllenCahnSplitting', 'test0'))
+    >>> model = Problem.load_from_checkpoint(os.path.join('logs_doctest', 'AllenCahnSplitting', 'test_splitting'))
     >>> type(model).__name__
     'AllenCahnSplitting'
     """

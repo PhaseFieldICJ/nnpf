@@ -162,18 +162,30 @@ def display_model_infos(model_or_path, recursive=True, use_torch_info=True, inpu
 
     Examples
     --------
+
+    Training a model:
+    >>> from nnpf.models import Reaction
+    >>> from nnpf.trainer import Trainer
+    >>> trainer = Trainer(default_root_dir="logs_doctest", name="Reaction", version="test_model_infos", max_epochs=1)
+    >>> model = Reaction(train_N=10, val_N=20, seed=0)
+    >>> import contextlib, io
+    >>> with contextlib.redirect_stdout(io.StringIO()):
+    ...     with contextlib.redirect_stderr(io.StringIO()):
+    ...         trainer.fit(model)
+
+    Displaying informations of this trained model:
     >>> import os
-    >>> display_model_infos(os.path.join('logs_doctest', 'Reaction', 'test0'), use_torch_info=False) # doctest:+ELLIPSIS
+    >>> display_model_infos(os.path.join('logs_doctest', 'Reaction', 'test_model_infos'), use_torch_info=False) # doctest:+ELLIPSIS
     <BLANKLINE>
     Model summary:
         class: Reaction
         problem: ReactionProblem
         ndof: 47
-        checkpoint path: logs_doctest/Reaction/test0/checkpoints/last.ckpt
+        checkpoint path: logs_doctest/Reaction/test_model_infos/checkpoints/last.ckpt
         epochs: 1
         steps: 1
         best score: 1.6774380207061768
-        best path: logs_doctest/Reaction/test0/checkpoints/epoch=0-v0.ckpt
+        best path: logs_doctest/Reaction/test_model_infos/checkpoints/epoch=0-v0.ckpt
     <BLANKLINE>
     Model hyper parameters:
         seed: 0
