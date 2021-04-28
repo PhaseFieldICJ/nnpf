@@ -115,7 +115,7 @@ class Domain:
         return torch.meshgrid(*k)
 
     def _check_real_shape(self, u):
-        assert u.shape[-self.dim:] == self.spatial_shape, "Input shape doesn't match domain shape"
+        assert list(u.shape[-self.dim:]) == self.spatial_shape, "Input shape doesn't match domain shape"
 
     def _check_complex_shape(self, u):
         assert u.shape[-1] == 2, "Input doesn't seems to be in complex format"
