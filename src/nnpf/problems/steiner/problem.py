@@ -14,7 +14,7 @@ __all__ = [
 ]
 
 
-class SteinerProblem(mcp.MeanCurvatureProblem):
+class SteinerProblem(MeanCurvatureProblem):
     """
     Base class for the Steiner problem
 

@@ -14,7 +14,7 @@ __all__ = [
 ]
 
 
-class WillmoreProblem(mcp.MeanCurvatureProblem):
+class WillmoreProblem(MeanCurvatureProblem):
     """
     Base class for the Willmore equation problem
 

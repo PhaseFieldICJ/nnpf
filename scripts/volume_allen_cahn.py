@@ -5,7 +5,7 @@ Draft script that draw volume evolution and comparison to exact solution
 FIXME: should be in allen_cahn_problem directly!
 """
 
-from allen_cahn_problem import AllenCahnProblem
+from nnpf.problems import AllenCahnProblem
 import torch
 import math
 import matplotlib.pyplot as plt
@@ -27,7 +27,7 @@ radius = 0.45 * domain_diameter
 dim = len(model.hparams.bounds)
 lp = model.hparams.lp if "lp" in model.hparams else 2
 
-model_vol, solution_vol = model.check_sphere_volume(radius=radius, progress_bar=True)
+model_vol, solution_vol = model.check_sphere_mass(radius=radius, progress_bar=True)
 t = torch.arange(0, model_vol.shape[0]) * model.hparams.dt # FIXME
 r = (radius**2 - 2*t).sqrt()
 exact_vol = 2**dim * math.gamma(1 + 1 / lp)**dim / math.gamma(1 + dim / lp) * r**dim
