@@ -26,6 +26,6 @@ def process(args):
     import pytest
     import nnpf
     import shutil
-    shutil.rmtree("./logs_doctest")
+    shutil.rmtree("./logs_doctest", ignore_errors=True)
     pytest.main(["--doctest-modules", *nnpf.__path__])
 
