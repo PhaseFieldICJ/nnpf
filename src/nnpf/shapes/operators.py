@@ -4,6 +4,7 @@ Operators from signed distances
 
 import torch
 import functools
+import math
 
 
 __all__ = [
@@ -23,6 +24,7 @@ __all__ = [
     "elongate",
     "displace",
     "transform",
+    "rotate",
 ]
 
 
@@ -176,6 +178,19 @@ def transform(shape, t):
 
     def dist(*X):
         return shape(*(sum(X[j] * t[i, j] for j in range(dim)) - translation[i] for i in range(dim)))
+
+    return dist
+
+def rotate(shape, theta, axis1=0, axis2=1):
+    """ Rotate a shape in the plane defined by the two given axis """
+
+    def dist(*X):
+        X = list(X)
+        X[axis1], X[axis2] = (
+            math.cos(theta) * X[axis1] + math.sin(theta) * X[axis2],
+            math.cos(theta) * X[axis2] - math.sin(theta) * X[axis1],
+        )
+        return shape(*X)
 
     return dist
 
