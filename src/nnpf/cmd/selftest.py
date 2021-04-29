@@ -25,5 +25,7 @@ def process(args):
     """ Process command line arguments """
     import pytest
     import nnpf
+    import shutil
+    shutil.rmtree("./logs_doctest")
     pytest.main(["--doctest-modules", *nnpf.__path__])
 
