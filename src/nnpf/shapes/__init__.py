@@ -44,6 +44,24 @@ tensor([[ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571],
         [ 0.2500,  0.0000, -0.2500,  0.0000,  0.2500],
         [ 0.3090,  0.1036,  0.0000,  0.1036,  0.3090],
         [ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571]])
+
+Some visualization and norm check:
+>>> from nnpf.domain import Domain
+>>> import nnpf.visu as visu
+>>> import matplotlib.pyplot as plt
+>>> d = Domain([(-1,1),(-1,1)], [1024, 1024])
+>>> p_list = [1.1, 2.]
+>>> fig = plt.figure(figsize=[2 * 4, len(p_list) * 4])
+>>> for i, p in enumerate(p_list):
+...     s = periodic(union(translation(box([0.5, 0.5], p=p), [-0.5, -0.25]), rounding(translation(arc(0.5, 1.18, p=p), [0.5, 0.25]), 0.1)), d.bounds)
+...     ax = plt.subplot(len(p_list), 2, 2*i + 1)
+...     im = visu.DistanceShow(s(*d.X), X=d.X)
+...     ax = plt.subplot(len(p_list), 2, 2*i + 2)
+...     im = visu.ImShow(check_dist(s, d, p=p), vmin=0, vmax=2, cmap='seismic')
+...     cb = plt.colorbar(im.mappable)
+>>> plt.pause(2.)
+>>> plt.savefig("shapes.png")
+
 """
 
 from .shapes import *

@@ -223,11 +223,13 @@ class DistanceShow(ImShow):
     -------
     >>> from nnpf.domain import Domain
     >>> from nnpf.shapes import periodic, union, sphere
-    >>> d = Domain([[-1, 1], [-1, 1]], [256, 256])
-    >>> s = periodic(union(sphere(0.5, [0, 0]), sphere(0.3, [0.4, 0.3])), d.bounds)
-    >>> im = DistanceShow(s, d.X)
     >>> import matplotlib.pyplot as plt
+    >>> d = Domain([[-1, 1], [-1, 1]], [1024, 1024])
+    >>> s = periodic(union(sphere(0.5, [0, 0]), sphere(0.3, [0.4, 0.3])), d.bounds)
+    >>> fig = plt.figure(figsize=[8, 8])
+    >>> im = DistanceShow(s, d.X)
     >>> plt.pause(2)
+    >>> plt.savefig("distance_show.png")
     """
     def __init__(self, shape_or_dist, X=None, scale=1., extent=None, in_color=[0.6, 0.8, 1.0], out_color=[0.9, 0.6, 0.3], **kwargs):
         # Extent
