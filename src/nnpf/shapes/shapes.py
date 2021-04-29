@@ -19,6 +19,7 @@ __all__ = [
     "line",
     "segment",
     "capsule",
+    "arc",
 ]
 
 
@@ -209,4 +210,22 @@ def capsule(a, b, thickness):
     """ Capsule between two points """
     return rounding(segment(a, b), thickness / 2)
 
+def arc(radius, theta, p=2, weights=None):
+    """
+    Sphere arc
+
+    Not really an arc since it returns a portion of a sphere in nD for n > 2.
+    Probably not exact for p != 2 or custom weights (to be checked)!
+    """
+    normal = torch.tensor([math.cos(theta), math.sin(theta)])
+    normal = normal / norm(normal, p=p, weights=weights)
+    line_dist = unsign(sphere(radius, p=p, weights=weights))
+    point_dist = sphere(0., center=radius * normal, p=p, weights=weights)
+
+    def dist(*X):
+        P = X[0], norm(X[1:])
+        side = P[1] * normal[0] - P[0] * normal[1]
+        return torch.where(side >= 0, line_dist(*P), point_dist(*P))
+
+    return dist
 
