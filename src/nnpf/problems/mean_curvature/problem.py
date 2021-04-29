@@ -9,7 +9,7 @@ from nnpf.utils import get_default_args
 from nnpf.problems import Problem
 from nnpf.domain import Domain
 from nnpf.functional import norm
-from .datasets import MCSphereDataset
+from .datasets import MCSphereDataset, MCSphereLazyDataset
 from .utils import check_sphere_mass
 
 
@@ -66,6 +66,7 @@ class MeanCurvatureProblem(Problem):
                  radius=[0.05, 0.45], lp=2,
                  train_N=100, train_steps=1, train_reverse=0.,
                  val_N=200, val_steps=5, val_reverse=0.,
+                 use_lazy_datasets=False,
                  **kwargs):
 
         super().__init__(**kwargs)
@@ -79,7 +80,7 @@ class MeanCurvatureProblem(Problem):
             'bounds', 'N', 'dt', 'epsilon',
             'batch_size', 'batch_shuffle', 'lr', 'loss_norms', 'loss_power',
             'radius', 'lp', 'train_N', 'val_N', 'train_steps', 'val_steps',
-            'train_reverse', 'val_reverse',
+            'train_reverse', 'val_reverse', 'use_lazy_datasets',
         )
 
 
@@ -226,8 +227,9 @@ class MeanCurvatureProblem(Problem):
         center = [0.5 * sum(b) for b in self.domain.bounds]
 
         # Datasets
+        Dataset = MCSphereLazyDataset if self.hparams.use_lazy_datasets else MCSphereDataset
         def generate_data(num_samples, steps, reverse):
-            return MCSphereDataset(
+            return Dataset(
                 self.sphere_radius,
                 self.profil,
                 self.domain.X,
@@ -299,6 +301,7 @@ class MeanCurvatureProblem(Problem):
         group.add_argument('--lr', type=float, help="Learning rate")
         group.add_argument('--loss_norms', type=float_or_str, nargs=2, action='append', help="List of (p, weight). Compose loss as sum of weight * (output - target).norm(p).pow(e). Default to l2 norm. Exponent e is defined with loss_power parameter.")
         group.add_argument('--loss_power', type=float, help="Power applied to each loss term (for regularization purpose)")
+        group.add_argument('--use_lazy_datasets', type=lambda v: bool(strtobool(v)), nargs='?', const=True, help="Use lazy-evaluation datasets")
         group.set_defaults(**{**get_default_args(MeanCurvatureProblem), **defaults})
 
         return parser
