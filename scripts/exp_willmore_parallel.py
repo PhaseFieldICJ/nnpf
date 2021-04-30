@@ -132,18 +132,3 @@ class WillmoreParallel(Problem):
         return parser
 
 
-if __name__ == "__main__":
-
-    # Command-line arguments
-    parser = argparse.ArgumentParser(
-        description="Model of the Willmore equation using parallel stack of repeated sequences of given scheme",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser = Trainer.add_argparse_args(parser, dict(name="WillmoreParallel"))
-    parser = WillmoreParallel.add_model_specific_args(parser, WillmoreParallel.defaults_from_config())
-    args = parser.parse_args()
-
-    # Model, training & fit
-    model = WillmoreParallel(**vars(args))
-    trainer = Trainer.from_argparse_args(args)
-    trainer.fit(model)
-
