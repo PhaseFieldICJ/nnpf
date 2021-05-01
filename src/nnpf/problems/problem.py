@@ -6,6 +6,7 @@ import pytorch_lightning as pl
 import argparse
 
 from nnpf.utils import get_default_args, checkpoint_from_path, fix_path
+from nnpf.nn.utils import get_model_by_name
 
 
 __all__ = [
@@ -65,14 +66,24 @@ class Problem(pl.LightningModule):
     def on_save_checkpoint(self, checkpoint):
         """ Called just before checkpointing """
         import inspect
+        import os
 
-        # So that to detect add a initialization parameter to detect loading
+        # Add a initialization parameter to detect loading
         checkpoint[type(self).CHECKPOINT_HYPER_PARAMS_KEY]["is_loaded"] = True
 
         # Save module and class of the model
         cls = type(self)
-        checkpoint['class_path'] = inspect.getfile(cls)
-        checkpoint['class_name'] = cls.__name__
+        name = cls.__name__
+        full_name = cls.__module__ + "." + name
+
+        if cls.__module__ != "IMPORT_FROM_FILE" and cls.__module__ != "__main__" and cls == get_model_by_name(full_name):
+            # Loadable with get_model_by_name => full name and no file's path
+            checkpoint['class_path'] = None
+            checkpoint['class_name'] = full_name
+        else:
+            # Was imported or launch from a file => name only and add file's path
+            checkpoint['class_path'] = os.path.relpath(inspect.getfile(cls))
+            checkpoint['class_name'] = cls.__name__
 
     @classmethod
     def load_from_checkpoint(cls, checkpoint_path, *args, map_location=None, **kwargs):
@@ -84,14 +95,8 @@ class Problem(pl.LightningModule):
 
         # Forward to the right class if current class's name doesn't match
         checkpoint = torch.load(checkpoint_path, map_location=map_location)
-        if cls.__name__ != checkpoint["class_name"]:
-            # From https://stackoverflow.com/a/67692
-            import importlib.util
-            spec = importlib.util.spec_from_file_location("model", fix_path(checkpoint["class_path"]))
-            foo = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(foo)
-            model_cls = getattr(foo, checkpoint["class_name"])
-
+        if cls.__name__ != checkpoint["class_name"].split('.')[-1]:
+            model_cls = get_model_by_name((checkpoint["class_path"] or "") + ":" + checkpoint["class_name"])
             # Check that we load a model from the current problem
             if not issubclass(model_cls, cls):
                 raise ImportError(f"{model_cls.__name__} is not a model of problem {cls.__name__}")

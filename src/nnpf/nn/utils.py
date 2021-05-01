@@ -88,13 +88,42 @@ def ndof(model):
 def get_model_by_name(name):
     """ Return model class given its name.
 
-    Search in global namespace, nn_models and torch.nn.
+    Search in (first found):
+    - in the file specified before the last ':' token if found
+    - a module (also from the current folder) if the name has a dot
+    - global namespace
+    - nnpf.nn
+    - nnpf.models
+    - torch.nn
     """
 
     # Already a class
     import inspect
     if inspect.isclass(name):
         return name
+
+    from nnpf.utils import fix_path
+
+    # Name is composed of the path and class name
+    if name.find(':') > 0: # Ignore if at first position
+        splits = name.split(':')
+        path, name = fix_path(':'.join(splits[:-1])), splits[-1]
+    else:
+        path, name = None, name.split(':')[-1]
+
+    # Path is specified
+    if path is not None:
+        try:
+            import importlib.util
+            import sys
+            # Using magick module name to use appropriate path in Problem.on_save_checkpoint
+            spec = importlib.util.spec_from_file_location("IMPORT_FROM_FILE", path)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[spec.name] = module
+            spec.loader.exec_module(module)
+            return getattr(module, name)
+        except:
+            pass
 
     # Name is composed of the module and class name
     if '.' in name:
@@ -232,11 +261,17 @@ def display_model_infos(model_or_path, recursive=True, use_torch_info=True, inpu
     print(f"""
 Model summary:
     class: {model_class.__name__}
+    class path: {inspect.getfile(model_class)}
+    module: {model_class.__module__}
     problem: {problem_class.__name__}
-    ndof: {ndof(model)}""")
+    ndof: {ndof(model)}
+""")
 
     if is_path:
         print(f"""\
+Checkpoint:
+    class name: {extra_data['class_name']}
+    class path: {extra_data['class_path']}
     checkpoint path: {checkpoint_path}
     epochs: {extra_data['epoch']}
     steps: {extra_data['global_step']}
