@@ -208,8 +208,14 @@ def display_model_infos(model_or_path, recursive=True, use_torch_info=True, inpu
     <BLANKLINE>
     Model summary:
         class: Reaction
+        class path: ...
+        module: nnpf.models.reaction
         problem: ReactionProblem
         ndof: 47
+    <BLANKLINE>
+    Checkpoint:
+        class name: nnpf.models.reaction.Reaction
+        class path: None
         checkpoint path: logs_doctest/Reaction/test_model_infos/checkpoints/last.ckpt
         epochs: 1
         steps: 1
