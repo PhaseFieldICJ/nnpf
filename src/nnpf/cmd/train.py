@@ -88,7 +88,7 @@ def add_parser(parser):
             # Add model and training specific options
             Model = get_model_by_name(args.model)
             model_parser = argparse.ArgumentParser(add_help=False)
-            model_parser = Trainer.add_argparse_args(model_parser, dict(name=args.model))
+            model_parser = Trainer.add_argparse_args(model_parser, dict(name=Model.__name__))
             model_parser = Model.add_model_specific_args(model_parser)
             parents.append(model_parser)
 
