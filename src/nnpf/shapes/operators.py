@@ -182,7 +182,11 @@ def transform(shape, t):
     return dist
 
 def rotate(shape, theta, axis1=0, axis2=1):
-    """ Rotate a shape in the plane defined by the two given axis """
+    """
+    Rotates a shape in the plane defined by the two given axis.
+
+    Not exact for lp-norm with p != 2 and theta not a multiple of pi/2.
+    """
 
     def dist(*X):
         X = list(X)
