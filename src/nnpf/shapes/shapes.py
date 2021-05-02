@@ -210,22 +210,45 @@ def capsule(a, b, thickness):
     """ Capsule between two points """
     return rounding(segment(a, b), thickness / 2)
 
-def arc(radius, theta, p=2, weights=None):
+def arc(radius, theta_start, theta_stop=None, p=2, weights=None):
     """
     Sphere arc
 
-    Not really an arc since it returns a portion of a sphere in nD for n > 2.
+    Not really an arc since it returns a portion of a sphere in nD for n > 2 (the distance will be wrong!)
     Probably not exact for p != 2 or custom weights (to be checked)!
+
+    Parameters
+    ----------
+    radius: float
+        Arc radius
+    theta_start: float
+        The angle from the first axis where the arc begins.
+    thetastop: float
+        The angle rom the first axis where the arc ends.
+        If None, the arc ends at 2pi - theta_start (clockwise).
+    p: int or float
+        The p in the lp norm.
     """
-    normal = torch.tensor([math.cos(theta), math.sin(theta)])
-    normal = normal / norm(normal, p=p, weights=weights)
-    line_dist = unsign(sphere(radius, p=p, weights=weights))
-    point_dist = sphere(0., center=radius * normal, p=p, weights=weights)
+    if theta_stop is None:
+        theta_stop = 2 * math.pi - theta_stop
+
+    theta_axe = math.pi + (theta_start + theta_stop) / 2
+    axe = torch.tensor([math.cos(theta_axe), math.sin(theta_axe)])
+
+    start_normal = torch.tensor([math.cos(theta_start), math.sin(theta_start)])
+    start_normal = start_normal / norm(start_normal, p=p, weights=weights)
+    stop_normal = torch.tensor([math.cos(theta_stop), math.sin(theta_stop)])
+    stop_normal = stop_normal / norm(stop_normal, p=p, weights=weights)
+
+    sphere_dist = unsign(sphere(radius, p=p, weights=weights))
+    start_dist = sphere(0., center=radius * start_normal, p=p, weights=weights)
+    stop_dist = sphere(0., center=radius * stop_normal, p=p, weights=weights)
 
     def dist(*X):
-        P = X[0], norm(X[1:])
-        side = P[1] * normal[0] - P[0] * normal[1]
-        return torch.where(side >= 0, line_dist(*P), point_dist(*P))
+        P1 = dot_product(X, axe)
+        P = P1, norm((x - P1 * a for x, a in zip(X, axe))) # Will not work in nD for n > 2 and p != 2 ...
+        side = P[1] * math.cos(min(theta_start, theta_stop) - theta_axe) - P[0] * math.sin(min(theta_start, theta_stop) - theta_axe)
+        return torch.where(side >= 0, sphere_dist(*X), torch.min(start_dist(*X), stop_dist(*X)))
 
     return dist
 

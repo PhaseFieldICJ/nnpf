@@ -53,7 +53,7 @@ Some visualization and norm check:
 >>> p_list = [1.1, 2.]
 >>> fig = plt.figure(figsize=[2 * 4, len(p_list) * 4])
 >>> for i, p in enumerate(p_list):
-...     s = periodic(union(translation(box([0.5, 0.5], p=p), [-0.5, -0.25]), rounding(translation(arc(0.5, 1.18, p=p), [0.5, 0.25]), 0.1)), d.bounds)
+...     s = periodic(union(translation(box([0.5, 0.5], p=p), [-0.5, -0.25]), rounding(translation(arc(0.5, 2.28, 6.2, p=p), [0.5, 0.25]), 0.1)), d.bounds)
 ...     ax = plt.subplot(len(p_list), 2, 2*i + 1)
 ...     im = visu.DistanceShow(s(*d.X), X=d.X)
 ...     ax = plt.subplot(len(p_list), 2, 2*i + 2)

@@ -8,6 +8,7 @@ import torch
 
 __all__ = [
     "norm",
+    "dot_product",
     "check_dist",
 ]
 
@@ -39,6 +40,14 @@ def norm(X, p=2, weights=None):
     else:
         # TODO: if needed, could be optimized for 1 and even power
         return sum(x.abs().pow(p) for x in X).pow(1 / p)
+
+
+def dot_product(A, B):
+    """
+    Returns the dot product along first axis.
+    """
+    return sum(a * b for a, b in zip(A, B))
+
 
 def check_dist(shape, domain, p=2):
     """
