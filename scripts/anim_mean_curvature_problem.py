@@ -34,6 +34,7 @@ parser.add_argument("--display_step", type=int, default=1, help="Render frame ev
 parser.add_argument("--fps", type=int, default=25, help="Frame per second in the saved animation")
 parser.add_argument("--figsize", type=int, default=[6, 6], nargs=2, help="Figure size in inches")
 parser.add_argument("--revert", type=lambda s:bool(strtobool(s)), nargs='?', const=True, default=False, help="Revert inside and outside of the phase")
+parser.add_argument("--output", type=str, default="anim.avi", help="File name of the generated animation")
 
 args = parser.parse_args()
 
@@ -110,7 +111,7 @@ title = plt.title(f"t = 0 ; it = 0")
 plt.tight_layout()
 plt.pause(1)
 
-with visu.AnimWriter('anim.avi', fps=args.fps, do_nothing=args.no_save) as anim:
+with visu.AnimWriter(args.output, fps=args.fps, do_nothing=args.no_save) as anim:
 
     for i in range(25):
         anim.add_frame()
