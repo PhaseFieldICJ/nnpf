@@ -230,7 +230,7 @@ def arc(radius, theta_start, theta_stop=None, p=2, weights=None):
         The p in the lp norm.
     """
     if theta_stop is None:
-        theta_stop = 2 * math.pi - theta_stop
+        theta_stop = 2 * math.pi - theta_start
 
     theta_axe = math.pi + (theta_start + theta_stop) / 2
     axe = torch.tensor([math.cos(theta_axe), math.sin(theta_axe)])
