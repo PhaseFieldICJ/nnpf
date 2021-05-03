@@ -214,7 +214,7 @@ def arc(radius, theta_start, theta_stop=None, p=2, weights=None):
     """
     Sphere arc
 
-    Not really an arc since it returns a portion of a sphere in nD for n > 2 (the distance will be wrong!)
+    Only in 2D.
     Probably not exact for p != 2 or custom weights (to be checked)!
 
     Parameters
@@ -245,8 +245,9 @@ def arc(radius, theta_start, theta_stop=None, p=2, weights=None):
     stop_dist = sphere(0., center=radius * stop_normal, p=p, weights=weights)
 
     def dist(*X):
+        assert len(X) == 2, "Arc shape only defined in 2D!"
         P1 = dot_product(X, axe)
-        P = P1, norm((x - P1 * a for x, a in zip(X, axe))) # Will not work in nD for n > 2 and p != 2 ...
+        P = P1, norm((x - P1 * a for x, a in zip(X, axe)))
         side = P[1] * math.cos(min(theta_start, theta_stop) - theta_axe) - P[0] * math.sin(min(theta_start, theta_stop) - theta_axe)
         return torch.where(side >= 0, sphere_dist(*X), torch.min(start_dist(*X), stop_dist(*X)))
 
