@@ -49,7 +49,7 @@ def dot_product(A, B):
     return sum(a * b for a, b in zip(A, B))
 
 
-def check_dist(shape, domain, p=2):
+def check_dist(dist, dX, p=2):
     """
     Returns the norm of the gradient of the signed distance using the dual norm of lp (ie l^{p/(p-1)}).
 
@@ -57,15 +57,15 @@ def check_dist(shape, domain, p=2):
 
     TODO: take into account the domain periodicity
     """
-    dist = shape(*domain.X)
+    dim = dist.ndim
     ddist = []
-    for i in range(domain.dim):
-        down_slice = [slice(1, -1)] * domain.dim
+    for i in range(dim):
+        down_slice = [slice(1, -1)] * dim
         down_slice[i] = slice(0, -2)
-        up_slice = [slice(1, -1)] * domain.dim
+        up_slice = [slice(1, -1)] * dim
         up_slice[i] = slice(2, None)
         ddist.append(
-            (dist[tuple(up_slice)] - dist[tuple(down_slice)]) / (2 * domain.dX[i])
+            (dist[tuple(up_slice)] - dist[tuple(down_slice)]) / (2 * dX[i])
         )
 
     if p == float("inf"):

@@ -57,7 +57,7 @@ Some visualization and norm check:
 ...     ax = plt.subplot(len(p_list), 2, 2*i + 1)
 ...     im = visu.DistanceShow(s(*d.X), X=d.X)
 ...     ax = plt.subplot(len(p_list), 2, 2*i + 2)
-...     im = visu.ImShow(check_dist(s, d, p=p), vmin=0, vmax=2, cmap='seismic')
+...     im = visu.ImShow(check_dist(s(*d.X), d.dX, p=p), vmin=0, vmax=2, cmap='seismic')
 ...     cb = plt.colorbar(im.mappable)
 >>> plt.pause(2.)
 >>> plt.savefig("doctest_shapes.png")
