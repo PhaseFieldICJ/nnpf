@@ -229,7 +229,7 @@ class DistanceShow(ImShow):
     >>> fig = plt.figure(figsize=[8, 8])
     >>> im = DistanceShow(s, d.X)
     >>> plt.pause(2)
-    >>> plt.savefig("distance_show.png")
+    >>> plt.savefig("doctest_distance_show.png")
     """
     def __init__(self, shape_or_dist, X=None, scale=1., extent=None, in_color=[0.6, 0.8, 1.0], out_color=[0.9, 0.6, 0.3], **kwargs):
         # Extent

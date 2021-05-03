@@ -60,7 +60,7 @@ Some visualization and norm check:
 ...     im = visu.ImShow(check_dist(s, d, p=p), vmin=0, vmax=2, cmap='seismic')
 ...     cb = plt.colorbar(im.mappable)
 >>> plt.pause(2.)
->>> plt.savefig("shapes.png")
+>>> plt.savefig("doctest_shapes.png")
 
 """
 
