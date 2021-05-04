@@ -43,7 +43,7 @@ def checkpoint_from_path(checkpoint_path):
         glob_expr = os.path.join(dirname, r"epoch=*.ckpt")
         checkpoint_list = glob.glob(glob_expr)
         if len(checkpoint_list) > 0:
-            checkpoint_path = sorted(checkpoint_list, key=lambda s: tuple(int(v) for v in re.search(r"epoch=([0-9]+)(-v([0-9]+))?\.ckpt$", s).group(1, 3) if v is not None))[-1]
+            checkpoint_path = sorted(checkpoint_list, key=lambda s: tuple(int(v) for v in re.findall(r"(\d+)", s)))[-1]
 
     return checkpoint_path
 
