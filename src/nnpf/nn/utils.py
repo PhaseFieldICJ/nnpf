@@ -220,7 +220,7 @@ def display_model_infos(model_or_path, recursive=True, use_torch_info=True, inpu
         epochs: 1
         steps: 1
         best score: 1.6774380207061768
-        best path: logs_doctest/Reaction/test_model_infos/checkpoints/epoch=0-v0.ckpt
+        best path: logs_doctest/Reaction/test_model_infos/checkpoints/epoch=0-step=0.ckpt
     <BLANKLINE>
     Model hyper parameters:
         seed: 0
