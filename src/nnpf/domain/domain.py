@@ -116,11 +116,11 @@ class Domain:
         return torch.meshgrid(*k)
 
     def _check_real_shape(self, u):
-        assert list(u.shape[-self.dim:]) == self.spatial_shape, "Input shape doesn't match domain shape"
+        assert u.shape[-self.dim:] == torch.Size(self.spatial_shape), "Input shape doesn't match domain shape"
 
     def _check_complex_shape(self, u):
         assert u.shape[-1] == 2, "Input doesn't seems to be in complex format"
-        assert u.shape[-(self.dim + 1):-1] == self.freq_shape, "Input shape doesn't match domain shape"
+        assert u.shape[-(self.dim + 1):-1] == torch.Size(self.freq_shape), "Input shape doesn't match domain shape"
 
     def fft(self, u):
         """ Real -> Complex FFT with batch and channel support """

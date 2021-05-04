@@ -20,10 +20,24 @@ def get_axe_fig(ax=None, fig=None):
 
 
 class ImShow:
-    """ Show image with right orientation and origin at lower left corner """
-    def __init__(self, img, ax=None, fig=None, *args, **kwargs):
+    """ Show image with right orientation and origin at lower left corner
+
+    Parameters
+    ----------
+    img: torch.tensor
+        The image values
+    X: tuple or None
+        If shape_or_dist is a shape, X are the point coordinates
+    extent: tuple/list or None
+        Domain extent. If None, calculated from X (if given)
+    """
+    def __init__(self, img, X=None, extent=None, ax=None, fig=None, *args, **kwargs):
+        # Extent
+        if X is not None and extent is None:
+            extent = [X[0].min(), X[0].max(), X[1].min(), X[1].max()]
+
         self.ax, self.fig = get_axe_fig(ax, fig)
-        self.graph = self.ax.imshow(self._get_img(img), origin="lower", *args, **kwargs)
+        self.graph = self.ax.imshow(self._get_img(img), *args, origin="lower", extent=extent, **kwargs)
 
     def update(self, img):
         self.graph.set_array(self._get_img(img))
@@ -54,7 +68,21 @@ def weight_center(weight_or_module):
 
 
 class KernelShow(ImShow):
-    """ Show convolution kernel """
+    """ Show convolution kernel
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf.functional import heat_kernel_spatial
+    >>> import matplotlib.pyplot as plt
+    >>> d = Domain([[-1, 1], [-1, 1]], [1024, 1024])
+    >>> kernel = heat_kernel_spatial(d, dt=1e-2)
+    >>> fig = plt.figure(figsize=[8, 8])
+    >>> im = KernelShow(kernel, disp_center=True)
+    >>> cb = plt.colorbar(im.mappable)
+    >>> plt.savefig("doctest_KernelShow.png")
+    >>> plt.pause(0.5)
+    """
     def __init__(self, weight_or_module, ax=None, fig=None, disp_center=False):
         self.disp_center = disp_center
 
@@ -81,7 +109,21 @@ class KernelShow(ImShow):
 
 
 class KernelFreqShow(ImShow):
-    """ Show convolution kernel in frequency space """
+    """ Show convolution kernel in frequency space
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf.functional import heat_kernel_spatial
+    >>> import matplotlib.pyplot as plt
+    >>> d = Domain([[-1, 1], [-1, 1]], [1024, 1024])
+    >>> kernel = heat_kernel_spatial(d, dt=1e-5)
+    >>> fig = plt.figure(figsize=[8, 8])
+    >>> im = KernelFreqShow(kernel)
+    >>> cb = plt.colorbar(im.mappable)
+    >>> plt.savefig("doctest_KernelFreqShow.png")
+    >>> plt.pause(0.5)
+    """
     def __init__(self, weight_or_module, ax=None, fig=None):
         super().__init__(self._get_array(weight_or_module), ax, fig)
 
@@ -95,7 +137,21 @@ class KernelFreqShow(ImShow):
 
 
 class KernelCumSumShow(ImShow):
-    """ Show kernel cumulative sum """
+    """ Show kernel cumulative sum
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf.functional import heat_kernel_spatial
+    >>> import matplotlib.pyplot as plt
+    >>> d = Domain([[-1, 1], [-1, 1]], [1024, 1024])
+    >>> kernel = heat_kernel_spatial(d, dt=1e-2)
+    >>> fig = plt.figure(figsize=[8, 8])
+    >>> im = KernelCumSumShow(kernel)
+    >>> cb = plt.colorbar(im.mappable)
+    >>> plt.savefig("doctest_KernelCumSumShow.png")
+    >>> plt.pause(0.5)
+    """
     def __init__(self, weight_or_module, ax=None, fig=None):
         super().__init__(self._get_array(weight_or_module), ax, fig)
 
@@ -143,7 +199,22 @@ class DiffusionIsotropyShow:
 
 
 class ContourShow:
-    """ Show contours of a given field """
+    """ Show contours of a given field
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> import matplotlib.pyplot as plt
+    >>> import torch
+    >>> d = Domain([[-1, 1], [-1, 1]], [1024, 1024])
+    >>> data = torch.cos(5 * d.X[0]) * torch.sin(4 * d.X[1])
+    >>> fig = plt.figure(figsize=[8, 8])
+    >>> im = ImShow(data, X=d.X)
+    >>> cb = plt.colorbar(im.mappable)
+    >>> ct = ContourShow(data, torch.linspace(-1, 1, 11), X=d.X, colors='black')
+    >>> plt.savefig("doctest_ContourShow.png")
+    >>> plt.pause(0.5)
+    """
     def __init__(self, data, levels, X=None, ax=None, fig=None, **kwargs):
 
         if X is None:
@@ -215,8 +286,6 @@ class DistanceShow(ImShow):
         If shape_or_dist is a shape, X are the point coordinates
     scale: real
         Scale of the visualization
-    extent: tuple/list or None
-        Domain extent. If None, calculated from X (if given)
     in_color, out_color: list of 3 floats in [0, 1]
         Inside and outside color
 
@@ -229,18 +298,14 @@ class DistanceShow(ImShow):
     >>> s = periodic(union(sphere(0.5, [0, 0]), sphere(0.3, [0.4, 0.3])), d.bounds)
     >>> fig = plt.figure(figsize=[8, 8])
     >>> im = DistanceShow(s, d.X)
-    >>> plt.pause(2)
-    >>> plt.savefig("doctest_distance_show.png")
+    >>> plt.savefig("doctest_DistanceShow.png")
+    >>> plt.pause(0.5)
     """
-    def __init__(self, shape_or_dist, X=None, scale=1., extent=None, in_color=[0.6, 0.8, 1.0], out_color=[0.9, 0.6, 0.3], **kwargs):
-        # Extent
-        if X is not None and extent is None:
-            extent = [X[0].min(), X[0].max(), X[1].min(), X[1].max()]
-
+    def __init__(self, shape_or_dist, X=None, scale=1., in_color=[0.6, 0.8, 1.0], out_color=[0.9, 0.6, 0.3], **kwargs):
         # Distance to image
         get_array = lambda s: distance_to_img(s, X, scale, in_color, out_color)
 
-        super().__init__(get_array(shape_or_dist), extent=extent, **kwargs)
+        super().__init__(get_array(shape_or_dist), X=X, **kwargs)
         self._get_array = get_array
 
     def update(self, shape_or_dist):
@@ -255,14 +320,26 @@ def get_frame(fig=None):
 
 
 class PhaseFieldShow(ImShow):
-    """ Show one or more phase field functions """
-    def __init__(self, *fields, X=None, extent=None, **kwargs):
-        # Extent
-        if X is not None and extent is None:
-            extent = [X[0].min(), X[0].max(), X[1].min(), X[1].max()]
+    """ Show one or more phase field functions
 
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf.shapes import periodic, sphere, subtraction
+    >>> from nnpf.functional import profil
+    >>> import matplotlib.pyplot as plt
+    >>> d = Domain([[-1, 1], [-1, 1]], [1024, 1024])
+    >>> epsilon = 0.01
+    >>> u1 = profil(periodic(sphere(0.5, [0, 0]), d.bounds)(*d.X), epsilon)
+    >>> u2 = profil(periodic(subtraction(sphere(0.3, [0.4, 0.3]), sphere(0.5, [0, 0])), d.bounds)(*d.X), epsilon)
+    >>> fig = plt.figure(figsize=[8, 8])
+    >>> img = PhaseFieldShow(u1, u2, 1 - u1 - u2, X=d.X)
+    >>> plt.savefig("doctest_PhaseFieldShow.png")
+    >>> plt.pause(0.5)
+    """
+    def __init__(self, *fields, X=None, **kwargs):
         super().__init__(self._get_array(*fields),
-                         extent=extent,
+                         X=X,
                          cmap=plt.get_cmap("gist_rainbow"),
                          vmin=0, vmax=max(1., len(fields) - 1),
                          **kwargs)
