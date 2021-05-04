@@ -4,6 +4,7 @@ for real <-> complex discrete Fourier transformations (using FFT).
 """
 
 import torch
+import torch.fft
 from nnpf.fft.domain import *
 
 __all__ = ["Domain"]
@@ -123,11 +124,11 @@ class Domain:
 
     def fft(self, u):
         """ Real -> Complex FFT with batch and channel support """
-        return torch.view_as_complex(torch.rfft(u, self.dim, normalized=False, onesided=True))
+        return torch.fft.rfftn(u, s=self.spatial_shape)
 
     def ifft(self, u):
         """ Complex -> Real FFT with batch and channel support """
-        return torch.irfft(torch.view_as_real(u), self.dim, normalized=False, onesided=True, signal_sizes=self.spatial_shape)
+        return torch.fft.irfftn(u, s=self.spatial_shape)
 
     def freq_shift(self, u):
         """

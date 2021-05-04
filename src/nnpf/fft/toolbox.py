@@ -1,4 +1,5 @@
 import torch
+import torch.fft
 from nnpf.functional import pad
 
 __all__ = ["fftconv"]
@@ -121,15 +122,15 @@ def fftconv(data, weight, bias=None, padding=0, padding_mode='zeros'):
 
     # Forward transformation
     # Insert dimension in data to take into account the input/output channels
-    data_hat = torch.view_as_complex(torch.rfft(data[:, None, ...], dim))
-    weight_hat = torch.view_as_complex(torch.rfft(weight, dim))
+    data_hat = torch.fft.rfftn(data[:, None, ...], s=data.shape[2:])
+    weight_hat = torch.fft.rfftn(weight, s=data.shape[2:])
 
     # Convolution
-    output_hat = torch.view_as_real(data_hat * weight_hat)
+    output_hat = data_hat * weight_hat
 
     # Backward transformation
     from .domain import ifftshift
-    output = torch.irfft(output_hat, dim, signal_sizes=data.shape[2:])
+    output = torch.fft.irfftn(output_hat, s=data.shape[2:])
     output = output.sum(dim=2) # Summing input channels
     output = ifftshift(output, axes=range(data.ndim - dim , data.ndim))
 

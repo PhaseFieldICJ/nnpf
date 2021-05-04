@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 import torch
+import torch.fft
 from torch.distributions.utils import broadcast_all
 import numpy as np
 
@@ -90,7 +91,7 @@ class KernelFreqShow(ImShow):
     def _get_array(self, weight_or_module):
         weight = get_weight(weight_or_module).squeeze()
         assert weight.ndim == 2, "Only for 2D input"
-        return torch.view_as_complex(torch.fft(weight[None, None, ..., None] * torch.tensor([1., 0]), weight.ndim)).abs()
+        return torch.fft.fftn(weight[None, None, ...], s=weight.shape).abs()
 
 
 class KernelCumSumShow(ImShow):
