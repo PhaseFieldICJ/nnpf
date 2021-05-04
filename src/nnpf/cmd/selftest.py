@@ -17,6 +17,7 @@ def add_parser(parser):
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         add_help=True,
     )
+    action_parser.add_argument('module', type=str, nargs='?', default="nnpf", help="Module or submodule to check")
 
     return action_parser
 
@@ -24,8 +25,9 @@ def add_parser(parser):
 def process(args):
     """ Process command line arguments """
     import pytest
-    import nnpf
     import shutil
+    import importlib
+    module = importlib.import_module(args.module)
     shutil.rmtree("./logs_doctest", ignore_errors=True)
-    pytest.main(["--doctest-modules", *nnpf.__path__])
+    pytest.main(["--doctest-modules", *module.__path__])
 
