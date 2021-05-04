@@ -91,7 +91,6 @@ class Trainer(pl.Trainer):
                 kwargs['callbacks'] = []
 
             kwargs['callbacks'].append(ModelCheckpoint(
-                filepath=None,
                 monitor='hp_metric',
                 save_top_k=1,
                 mode='min',
@@ -154,7 +153,7 @@ class Trainer(pl.Trainer):
         # do nothing since default_hp_metric has been set to False in
         # logger initialization (otherwise initial value is -1).
         self.logger.log_hyperparams(
-            params=self.get_model().hparams,
+            params=self.lightning_module.hparams,
             metrics={'hp_metric': self.checkpoint_callback.best_model_score.item()}
         )
 

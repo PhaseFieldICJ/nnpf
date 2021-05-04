@@ -96,7 +96,7 @@ class ReactionProblem(Problem):
         """ Called at epoch end of the validation step (after all batches) """
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
         val_loss = {'val_loss': avg_loss}
-        return self.dispatch_metrics({'val_loss': avg_loss})
+        self.dispatch_metrics({'val_loss': avg_loss})
 
     @staticmethod
     def add_model_specific_args(parent_parser, defaults={}):

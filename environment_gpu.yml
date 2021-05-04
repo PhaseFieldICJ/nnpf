@@ -10,7 +10,7 @@ dependencies:
   - pytorch=1.6.0
   - torchvision>=0.7.0
   - cudatoolkit=10.2
-  - pytorch-lightning=1.1.8
+  - pytorch-lightning=1.2.0
   - tqdm
   - imageio
   - imageio-ffmpeg
