@@ -71,7 +71,7 @@ class Trainer(pl.Trainer):
     """
 
     @merge_signature(pl.Trainer.__init__)
-    def __init__(self, version=None, name=None, **kwargs):
+    def __init__(self, version=None, name=None, log_graph=False, **kwargs):
 
         # Logger
         if kwargs.get('logger', True) is True:
@@ -81,7 +81,7 @@ class Trainer(pl.Trainer):
                 name=name,
                 version=version,
                 default_hp_metric=False, # hp_metric will be declared after the sanity check, see below
-                log_graph=True, # need example_input_array attribute to be set in the model
+                log_graph=log_graph # need example_input_array attribute to be set in the model
             )
 
         # Checkpointer
@@ -104,20 +104,26 @@ class Trainer(pl.Trainer):
             **kwargs
         )
 
+        # Creating log folder
+        path = os.path.join(self.logger.log_dir, "checkpoints")
+        os.makedirs(path, exist_ok=True)
+
 
     @classmethod
     def add_argparse_args(cls, parent_parser, defaults={}):
         """ Add trainer command-line options and experiment version """
+        from distutils.util import strtobool
+
         parser = super().add_argparse_args(parent_parser)
         parser.add_argument('--version', help="Experiment version for the logger")
         parser.add_argument('--name', help="Experiment name for the logger")
+        parser.add_argument('--log_graph', type=lambda v: bool(strtobool(v)), nargs='?', const=True, help="Calculates and log the computational graph of the model")
         parser.set_defaults(**{**get_default_args(Trainer), **defaults})
         return parser
 
     def train(self):
         # Saving initial state
         path = os.path.join(self.logger.log_dir, "checkpoints")
-        os.makedirs(path, exist_ok=True)
         self.save_checkpoint(os.path.join(path, f"epoch={self.current_epoch}.ckpt"))
         super().train()
 
