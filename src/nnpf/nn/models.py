@@ -11,6 +11,7 @@ __all__ = [
     "GaussActivation",
     "Parallel",
     "LinearChannels",
+    "Residual",
 ]
 
 
@@ -117,5 +118,19 @@ class LinearChannels(Linear):
     def forward(self, data):
         perm = [0, -1] + list(range(2, data.ndim - 1)) + [1]
         return super().forward(data.permute(*perm)).permute(*perm)
+
+
+class Residual(Module):
+    """
+    A residual block
+    """
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def forward(self, data):
+        out = self.model(data)
+        out += data
+        return out
 
 
