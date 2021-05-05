@@ -216,7 +216,7 @@ def display_model_infos(model_or_path, recursive=True, use_torch_info=True, inpu
     Checkpoint:
         class name: nnpf.models.reaction.Reaction
         class path: None
-        checkpoint path: logs_doctest/Reaction/test_model_infos/checkpoints/last.ckpt
+        checkpoint path: logs_doctest/Reaction/test_model_infos/checkpoints/epoch=0-step=0.ckpt
         epochs: 1
         steps: 1
         current score: 1.6774380207061768

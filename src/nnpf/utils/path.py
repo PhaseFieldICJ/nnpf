@@ -35,8 +35,9 @@ def checkpoint_from_path(checkpoint_path):
     if os.path.isdir(checkpoint_path):
         dirname = os.path.join(os.path.expanduser(checkpoint_path), r"checkpoints")
 
-        if os.path.exists(os.path.join(dirname, r"last.ckpt")):
-            return os.path.join(dirname, r"last.ckpt")
+        # Don't get the last.ckpt automatically since it is not the best checkpoint
+        #if os.path.exists(os.path.join(dirname, r"last.ckpt")):
+        #    return os.path.join(dirname, r"last.ckpt")
 
         import glob
         import re
