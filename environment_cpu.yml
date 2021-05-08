@@ -1,4 +1,4 @@
-name: nnpf_cpu_test
+name: nnpf_cpu
 channels:
   - defaults
   - pytorch
