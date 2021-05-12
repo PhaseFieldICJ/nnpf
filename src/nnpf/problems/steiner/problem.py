@@ -3,7 +3,6 @@ Base module and utils for the Steiner learning problem
 """
 
 import torch
-from torch.utils.data import DataLoader
 
 from nnpf.problems import MeanCurvatureProblem
 from nnpf.functional.phase_field import dprofil, idprofil

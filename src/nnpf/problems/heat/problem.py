@@ -55,6 +55,7 @@ class HeatProblem(Problem):
                  batch_size=10, batch_shuffle=True, lr=1e-3, loss_norms=None, loss_power=2.,
                  train_N=100, train_radius=[0, 0.25], train_epsilon=[0, 0.1], train_num_shapes=1, train_steps=10,
                  val_N=100, val_radius=[0, 0.35], val_epsilon=[0, 0.2], val_num_shapes=[1, 3], val_steps=10,
+                 num_workers=0,
                  **kwargs):
 
         super().__init__(**kwargs)
@@ -64,7 +65,8 @@ class HeatProblem(Problem):
         # Hyper-parameters (used for saving/loading the module)
         self.save_hyperparameters('bounds', 'N', 'dt', 'batch_size', 'batch_shuffle', 'lr', 'loss_norms', 'loss_power',
                                   'train_N', 'train_radius', 'train_epsilon', 'train_num_shapes', 'train_steps',
-                                  'val_N', 'val_radius', 'val_epsilon', 'val_num_shapes', 'val_steps',)
+                                  'val_N', 'val_radius', 'val_epsilon', 'val_num_shapes', 'val_steps',
+                                  'num_workers',)
 
     @property
     def domain(self):
@@ -141,11 +143,20 @@ class HeatProblem(Problem):
 
     def train_dataloader(self):
         """ Returns the training data loader """
-        return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size or len(self.train_dataset), shuffle=self.hparams.batch_shuffle)
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.hparams.batch_size or len(self.train_dataset),
+            shuffle=self.hparams.batch_shuffle,
+            num_workers=self.hparams.num_workers
+        )
 
     def val_dataloader(self):
         """ Returns the validation data loader """
-        return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size or len(self.val_dataset))
+        return DataLoader(
+            self.val_dataset,
+            batch_size=self.hparams.batch_size or len(self.val_dataset),
+            num_workers=self.hparams.num_workers
+        )
 
     @staticmethod
     def add_model_specific_args(parent_parser, defaults={}):

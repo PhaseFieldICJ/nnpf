@@ -66,7 +66,7 @@ class MeanCurvatureProblem(Problem):
                  radius=[0.05, 0.45], lp=2,
                  train_N=100, train_steps=1, train_reverse=0.,
                  val_N=200, val_steps=5, val_reverse=0.,
-                 use_lazy_datasets=False,
+                 use_lazy_datasets=False, num_workers=0,
                  **kwargs):
 
         super().__init__(**kwargs)
@@ -81,6 +81,7 @@ class MeanCurvatureProblem(Problem):
             'batch_size', 'batch_shuffle', 'lr', 'loss_norms', 'loss_power',
             'radius', 'lp', 'train_N', 'val_N', 'train_steps', 'val_steps',
             'train_reverse', 'val_reverse', 'use_lazy_datasets',
+            'num_workers',
         )
 
 
@@ -247,11 +248,20 @@ class MeanCurvatureProblem(Problem):
 
     def train_dataloader(self):
         """ Returns the training data loader """
-        return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size or len(self.train_dataset), shuffle=self.hparams.batch_shuffle)
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.hparams.batch_size or len(self.train_dataset),
+            shuffle=self.hparams.batch_shuffle,
+            num_workers=self.hparams.num_workers
+        )
 
     def val_dataloader(self):
         """ Returns the validation data loader """
-        return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size or len(self.val_dataset))
+        return DataLoader(
+            self.val_dataset,
+            batch_size=self.hparams.batch_size or len(self.val_dataset),
+            num_workers=self.hparams.num_workers
+        )
 
     @staticmethod
     def add_model_specific_args(parent_parser, defaults={}):

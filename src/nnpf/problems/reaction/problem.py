@@ -42,7 +42,7 @@ class ReactionProblem(Problem):
         Learning rate of the optimizer
     """
 
-    def __init__(self, epsilon=2/2**8, dt=None, margin=0.1, train_N=100, val_N=None, batch_size=10, batch_shuffle=True, lr=1e-3, **kwargs):
+    def __init__(self, epsilon=2/2**8, dt=None, margin=0.1, train_N=100, val_N=None, batch_size=10, batch_shuffle=True, lr=1e-3, num_workers=0, **kwargs):
 
         super().__init__(**kwargs)
 
@@ -51,7 +51,7 @@ class ReactionProblem(Problem):
         val_N = val_N or 10 * train_N
 
         # Hyper-parameters (used for saving/loading the module)
-        self.save_hyperparameters('dt', 'epsilon', 'margin', 'train_N', 'val_N', 'batch_size', 'batch_shuffle', 'lr')
+        self.save_hyperparameters('dt', 'epsilon', 'margin', 'train_N', 'val_N', 'batch_size', 'batch_shuffle', 'lr', 'num_workers')
 
     @property
     def example_input_array(self):
@@ -80,11 +80,20 @@ class ReactionProblem(Problem):
 
     def train_dataloader(self):
         """ Returns the training data loader """
-        return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size or len(self.train_dataset), shuffle=self.hparams.batch_shuffle)
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.hparams.batch_size or len(self.train_dataset),
+            shuffle=self.hparams.batch_shuffle,
+            num_workers=self.hparams.num_workers
+        )
 
     def val_dataloader(self):
         """ Returns the validation data loader """
-        return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size or len(self.val_dataset))
+        return DataLoader(
+            self.val_dataset,
+            batch_size=self.hparams.batch_size or len(self.val_dataset),
+            num_workers=self.hparams.num_workers
+        )
 
     def validation_step(self, batch, batch_idx):
         """ Called at each batch of the validation data """

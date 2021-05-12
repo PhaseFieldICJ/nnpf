@@ -234,6 +234,7 @@ def display_model_infos(model_or_path, recursive=True, use_torch_info=True, inpu
         batch_size: 10
         batch_shuffle: True
         lr: 0.001
+        num_workers: 0
         layer_dims: [8, 3]
         activation: GaussActivation
     <BLANKLINE>
