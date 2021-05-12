@@ -30,7 +30,7 @@ class Trainer(pl.Trainer):
     >>> args = parser.parse_args([
     ...     "--name", "DocTest",
     ...     "--version", "Trainer",
-    ...     "--default_root_dir", "doctest_logs",
+    ...     "--default_root_dir", "logs_doctest",
     ...     "--check_val_every_n_epoch", "100",
     ...     "--max_epochs", "1000",
     ... ])
@@ -45,14 +45,14 @@ class Trainer(pl.Trainer):
     >>> model_checkpoint.save_last
     True
     >>> trainer.logger.log_dir
-    'doctest_logs/DocTest/Trainer'
+    'logs_doctest/DocTest/Trainer'
     >>> trainer.check_val_every_n_epoch
     100
     >>> trainer.max_epochs
     1000
 
     Using the constructor:
-    >>> trainer = Trainer(name="DocTest", version="Trainer", default_root_dir="doctest_logs", check_val_every_n_epoch=100, max_epochs=1000)
+    >>> trainer = Trainer(name="DocTest", version="Trainer", default_root_dir="logs_doctest", check_val_every_n_epoch=100, max_epochs=1000)
 
     Checking:
     >>> model_checkpoint = trainer.checkpoint_callback
@@ -63,7 +63,7 @@ class Trainer(pl.Trainer):
     >>> model_checkpoint.save_last
     True
     >>> trainer.logger.log_dir
-    'doctest_logs/DocTest/Trainer'
+    'logs_doctest/DocTest/Trainer'
     >>> trainer.check_val_every_n_epoch
     100
     >>> trainer.max_epochs
