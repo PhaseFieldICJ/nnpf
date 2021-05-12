@@ -19,7 +19,7 @@ class TensorBoardScalars:
     >>> from nnpf.trainer import Trainer
     >>> from nnpf.models import Reaction
     >>> trainer = Trainer(default_root_dir="logs_doctest", name="Reaction", version="test_tbs", max_epochs=10)
-    >>> model = Reaction(train_N=10, val_N=20, seed=0)
+    >>> model = Reaction(train_N=10, val_N=20, seed=0, num_workers=4)
     >>> import contextlib, io
     >>> with contextlib.redirect_stdout(io.StringIO()):
     ...     with contextlib.redirect_stderr(io.StringIO()):

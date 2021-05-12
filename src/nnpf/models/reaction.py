@@ -34,7 +34,7 @@ class Reaction(ReactionProblem):
     Training:
     >>> from nnpf.trainer import Trainer
     >>> trainer = Trainer(default_root_dir="logs_doctest", name="Reaction", version="test0", max_epochs=1)
-    >>> model = Reaction(train_N=10, val_N=20, seed=0)
+    >>> model = Reaction(train_N=10, val_N=20, seed=0, num_workers=4)
     >>> import contextlib, io
     >>> with contextlib.redirect_stdout(io.StringIO()):
     ...     with contextlib.redirect_stderr(io.StringIO()):

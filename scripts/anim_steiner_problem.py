@@ -37,6 +37,7 @@ parser.add_argument("--fps", type=int, default=25, help="Frame per second in the
 parser.add_argument("--figsize", type=int, default=[6, 6], nargs=2, help="Figure size in inches")
 parser.add_argument("--revert", type=lambda s:bool(strtobool(s)), nargs='?', const=True, default=False, help="Revert inside and outside of the phase")
 parser.add_argument("--output", type=str, default="anim.avi", help="File name of the generated animation")
+parser.add_argument("--npoints", type=int, default=3, help="Number of points in Steiner problem")
 
 args = parser.parse_args()
 
@@ -83,6 +84,7 @@ elif args.shape == "three":
     spheres = [(0.1, 0.2, 0.2), (0.2, 0.3, 0.7), (0.05, 0.7, 0.3)]
 
 s = shapes.union(*(shapes.sphere(radius(p[0], args.scale), pos(p[1:], args.scale), args.lp_shape) for p in spheres))
+#s = shapes.intersection(s, shapes.segment([0.5, 0], [0.5, 1]))
 dist_sol = lambda t: reduce(torch.min, [shapes.sphere(model.sphere_radius(radius(p[0], args.scale), t), pos(p[1:], args.scale), args.lp_shape)(*domain.X) for p in spheres])
 
 # Periodizing
@@ -90,15 +92,18 @@ s = shapes.periodic(s, bounds)
 
 # Phase field
 u = model.profil(s(*domain.X), model.hparams.epsilon)
+u = torch.min(u, model.profil(shapes.segment([0.5, 0.1],[0.5, 0.9])(*domain.X), model.hparams.epsilon)) 
 if args.revert:
     u = 1. - u
 
 def dot_pos(theta):
     return [
-        pos([0.5, 0.5], args.scale)[0] + radius(0.25, args.scale) * math.cos(theta),
-        pos([0.5, 0.5], args.scale)[1] + radius(0.25, args.scale) * math.sin(theta)
+        pos([0.5, 0.5], args.scale)[0] + radius(0.3, args.scale) * math.cos(theta),
+        pos([0.5, 0.5], args.scale)[1] + radius(0.3, args.scale) * math.sin(theta)
     ]
-dots = shapes.union(*(shapes.translation(shapes.dot(args.lp_shape), dot_pos(theta)) for theta in [0, 2*math.pi/3, 4*math.pi/3]))
+import random
+random.seed(0)
+dots = shapes.union(*(shapes.translation(shapes.dot(args.lp_shape), dot_pos((i + random.random() - 0.5) * 2 * math.pi / args.npoints )) for i in range(args.npoints)))
 dots_u = model.profil(dots(*domain.X), model.hparams.epsilon)
 
 # Graph

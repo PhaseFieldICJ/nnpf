@@ -196,7 +196,7 @@ def display_model_infos(model_or_path, recursive=True, use_torch_info=True, inpu
     >>> from nnpf.models import Reaction
     >>> from nnpf.trainer import Trainer
     >>> trainer = Trainer(default_root_dir="logs_doctest", name="Reaction", version="test_model_infos", max_epochs=1)
-    >>> model = Reaction(train_N=10, val_N=20, seed=0)
+    >>> model = Reaction(train_N=10, val_N=20, seed=0, num_workers=4)
     >>> import contextlib, io
     >>> with contextlib.redirect_stdout(io.StringIO()):
     ...     with contextlib.redirect_stderr(io.StringIO()):
@@ -234,7 +234,7 @@ def display_model_infos(model_or_path, recursive=True, use_torch_info=True, inpu
         batch_size: 10
         batch_shuffle: True
         lr: 0.001
-        num_workers: 0
+        num_workers: 4
         layer_dims: [8, 3]
         activation: GaussActivation
     <BLANKLINE>
