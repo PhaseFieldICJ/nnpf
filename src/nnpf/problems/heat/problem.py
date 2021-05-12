@@ -196,6 +196,7 @@ class HeatProblem(Problem):
         group.add_argument('--lr', type=float, help="Learning rate")
         group.add_argument('--loss_norms', type=float_or_str, nargs=2, action='append', help="List of (p, weight). Compose loss as sum of weight * (output - target).norm(p).pow(e). Default to l2 norm. Exponent e is defined with loss_power parameter.")
         group.add_argument('--loss_power', type=float, help="Power applied to each loss term (for regularization purpose)")
+        group.add_argument('--num_workers', type=int, help="Number of subprocesses used for data loading")
         group.set_defaults(**{**get_default_args(HeatProblem), **defaults})
 
         return parser

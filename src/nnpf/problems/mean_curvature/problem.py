@@ -312,6 +312,7 @@ class MeanCurvatureProblem(Problem):
         group.add_argument('--loss_norms', type=float_or_str, nargs=2, action='append', help="List of (p, weight). Compose loss as sum of weight * (output - target).norm(p).pow(e). Default to l2 norm. Exponent e is defined with loss_power parameter.")
         group.add_argument('--loss_power', type=float, help="Power applied to each loss term (for regularization purpose)")
         group.add_argument('--use_lazy_datasets', type=lambda v: bool(strtobool(v)), nargs='?', const=True, help="Use lazy-evaluation datasets")
+        group.add_argument('--num_workers', type=int, help="Number of subprocesses used for data loading")
         group.set_defaults(**{**get_default_args(MeanCurvatureProblem), **defaults})
 
         return parser

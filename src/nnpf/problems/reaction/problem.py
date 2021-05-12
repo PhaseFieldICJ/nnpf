@@ -120,6 +120,7 @@ class ReactionProblem(Problem):
         group.add_argument('--batch_size', type=int, help="Size of batch")
         group.add_argument('--batch_shuffle', type=lambda v: bool(strtobool(v)), nargs='?', const=True, help="Shuffle batch")
         group.add_argument('--lr', type=float, help="Learning rate")
+        group.add_argument('--num_workers', type=int, help="Number of subprocesses used for data loading")
         group.set_defaults(**{**get_default_args(ReactionProblem), **defaults})
         return parser
 
