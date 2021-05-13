@@ -219,8 +219,8 @@ def display_model_infos(model_or_path, recursive=True, use_torch_info=True, inpu
         checkpoint path: logs_doctest/Reaction/test_model_infos/checkpoints/epoch=0-step=0.ckpt
         epochs: 1
         steps: 1
-        current score: 1.6774380207061768
-        best score: 1.6774380207061768
+        current score: 1.655346155166626
+        best score: 1.655346155166626
         best path: logs_doctest/Reaction/test_model_infos/checkpoints/epoch=0-step=0.ckpt
         PyTorch-Ligthing version: ...
     <BLANKLINE>

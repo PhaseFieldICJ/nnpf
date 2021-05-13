@@ -94,7 +94,7 @@ class Trainer(pl.Trainer):
                 monitor='hp_metric',
                 save_top_k=1,
                 mode='min',
-                period=1,
+                every_n_val_epochs=1,
                 save_last=True,
             ))
 
@@ -120,25 +120,7 @@ class Trainer(pl.Trainer):
         parser.set_defaults(**{**get_default_args(Trainer), **defaults})
         return parser
 
-    def train(self):
-        # Saving initial state
-        path = os.path.join(self.logger.log_dir, "checkpoints")
-        self.save_checkpoint(os.path.join(path, f"epoch={self.current_epoch}.ckpt"))
-        super().train()
-
-    def on_sanity_check_start(self):
-        """ HACK to have appropriate hp_metric initial value """
-        # Force full validation in sanity check
-        self.num_sanity_val_step = float("inf")
-
-        # Force logging validation results by fainting a normal evaluation
-        self.running_sanity_check = False
-
-        super().on_sanity_check_start()
-
-    def on_sanity_check_end(self):
-        """ HACK to have appropriate hp_metric initial value """
-
+    def fit(self, model, *args, **kwargs):
         # Disabing TensorBoardLogger.log_metrics since log_hyperparams
         # call log_metrics with step always set to 0, leading to a zigzag
         # in the graph
@@ -147,16 +129,19 @@ class Trainer(pl.Trainer):
         log_metrics = self.logger.log_metrics
         self.logger.log_metrics = do_nothing
 
-        # Declaring hyper parameters and hp_metric with value calculated
-        # during the sanity check.
-        # Previous call to log_hyperparams from training setup should
-        # do nothing since default_hp_metric has been set to False in
-        # logger initialization (otherwise initial value is -1).
         self.logger.log_hyperparams(
-            params=self.lightning_module.hparams,
-            metrics={'hp_metric': self.checkpoint_callback.best_model_score.item()}
+            params=model.hparams,
+            metrics={'hp_metric': 0}
         )
 
         # Restoring TensorBoard.log_metrics
         self.logger.log_metrics = log_metrics
+
+        super().fit(model, *args, **kwargs)
+
+    def train(self):
+        # Saving initial state
+        path = os.path.join(self.logger.log_dir, "checkpoints")
+        self.save_checkpoint(os.path.join(path, f"epoch={self.current_epoch}.ckpt"))
+        super().train()
 
