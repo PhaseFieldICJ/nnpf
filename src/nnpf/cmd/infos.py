@@ -2,7 +2,7 @@
 Display informations about a model from a checkpoint
 """
 
-def add_parser(parser):
+def add_parser(parser, drill_parser):
     """ Add subparser for infos action """
     import argparse
 

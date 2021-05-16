@@ -22,7 +22,7 @@ def model_name(name):
     return name
 
 
-def add_action_parser(parser, parents=[], defaults={}, drill=False):
+def add_action_parser(parser, parents=[], defaults={}, drill=False, name="train", doc=__doc__):
     """ Adds base options for action parser """
 
     from . import get_subparsers
@@ -45,9 +45,9 @@ def add_action_parser(parser, parents=[], defaults={}, drill=False):
 
     # Declare action
     action_parser = subparsers.add_parser(
-        "train",
-        description=__doc__,
-        help=__doc__,
+        name,
+        description=doc,
+        help=doc,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         add_help=False,
         parents=[base_parser] + parents,
@@ -59,41 +59,44 @@ def add_action_parser(parser, parents=[], defaults={}, drill=False):
     return action_parser
 
 
-def add_parser(parser):
+def add_parser(parser, drill_parser, name="train"):
     """ Add subparser for training action """
     import copy
     from nnpf.trainer import Trainer
     from nnpf.nn import get_model_by_name
+    from . import ArgumentError
 
     parents = []
     defaults = {}
 
     # Trial parsing to check if train is the current action
     # and if a model is actually given
-    tmp_parser = copy.deepcopy(parser)
-    add_action_parser(tmp_parser, drill=True)
-    args, _ = tmp_parser.parse_known_args()
+    add_action_parser(drill_parser, drill=True, name=name)
+    try:
+        args, _ = drill_parser.parse_known_args()
+    except ArgumentError:
+        pass
+    else:
+        if args.action == name:
+            # Load config if specified
+            if args.config is not None:
+                import yaml
+                with open(args.config, 'r') as fh:
+                    defaults = {**defaults, **yaml.safe_load(fh)}
 
-    if args.action == "train":
-        # Load config if specified
-        if args.config is not None:
-            import yaml
-            with open(args.config, 'r') as fh:
-                defaults = {**defaults, **yaml.safe_load(fh)}
+            # Use model from config if necessary and available
+            args.model = defaults.get("model", args.model)
 
-        # Use model from config if necessary and available
-        args.model = defaults.get("model", args.model)
-
-        if args.model is not None:
-            # Add model and training specific options
-            Model = get_model_by_name(args.model)
-            model_parser = argparse.ArgumentParser(add_help=False)
-            model_parser = Trainer.add_argparse_args(model_parser, dict(name=Model.__name__))
-            model_parser = Model.add_model_specific_args(model_parser)
-            parents.append(model_parser)
+            if args.model is not None:
+                # Add model and training specific options
+                Model = get_model_by_name(args.model)
+                model_parser = argparse.ArgumentParser(add_help=False)
+                model_parser = Trainer.add_argparse_args(model_parser, dict(name=Model.__name__))
+                model_parser = Model.add_model_specific_args(model_parser)
+                parents.append(model_parser)
 
     # Add action parser and set defaults
-    action_parser = add_action_parser(parser, parents=parents, defaults=defaults)
+    action_parser = add_action_parser(parser, parents=parents, defaults=defaults, name=name)
     action_parser.set_defaults(**defaults)
     return action_parser
 

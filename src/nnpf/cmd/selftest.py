@@ -2,7 +2,7 @@
 Launchs self-test of the module
 """
 
-def add_parser(parser):
+def add_parser(parser, drill_parser):
     """ Add subparser for selftest action """
 
     import argparse
