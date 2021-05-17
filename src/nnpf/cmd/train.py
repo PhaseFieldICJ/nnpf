@@ -59,7 +59,7 @@ def add_action_parser(parser, parents=[], defaults={}, drill=False, name="train"
     return action_parser
 
 
-def add_parser(parser, drill_parser, name="train"):
+def add_parser(parser, drill_parser, name="train", doc=__doc__):
     """ Add subparser for training action """
     import copy
     from nnpf.trainer import Trainer
@@ -71,7 +71,7 @@ def add_parser(parser, drill_parser, name="train"):
 
     # Trial parsing to check if train is the current action
     # and if a model is actually given
-    add_action_parser(drill_parser, drill=True, name=name)
+    add_action_parser(drill_parser, drill=True, name=name, doc=doc)
     try:
         args, _ = drill_parser.parse_known_args()
     except ArgumentError:
@@ -96,7 +96,7 @@ def add_parser(parser, drill_parser, name="train"):
                 parents.append(model_parser)
 
     # Add action parser and set defaults
-    action_parser = add_action_parser(parser, parents=parents, defaults=defaults, name=name)
+    action_parser = add_action_parser(parser, parents=parents, defaults=defaults, name=name, doc=doc)
     action_parser.set_defaults(**defaults)
     return action_parser
 
