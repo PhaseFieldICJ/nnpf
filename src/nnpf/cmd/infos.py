@@ -22,7 +22,7 @@ def add_parser(parser, drill_parser):
     action_parser.add_argument('--use_torch_info', type=lambda v: bool(int(v)), default=True, help="Display detailed informations and memory usage using torchinfo package")
     action_parser.add_argument('--input_size', type=lambda v: [int(s) for s in v.split(',')], default=None, help="Input size for calculating memory usage. Example: 1,1,256,256. If None, use example_input_array shape if available.")
     action_parser.add_argument('--batch_size', type=int, default=None, help="Overwrite batch size in input size")
-    action_parser.add_argument('--depth', type=int, default=4, help="Number of nested layers to traverse for detailed informations")
+    action_parser.add_argument('--depth', type=int, default=100, help="Number of nested layers to traverse for detailed informations")
     action_parser.add_argument('--verbose', type=int, default=1, help="Verbose level of torchinfo.summary")
 
     return action_parser
