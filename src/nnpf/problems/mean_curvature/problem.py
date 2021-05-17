@@ -112,7 +112,7 @@ class MeanCurvatureProblem(Problem):
     @property
     def example_input_array(self):
         """ Example of input (for graph generation) """
-        return torch.rand(1, 1, *self.domain.N)
+        return torch.rand(self.hparams.batch_size or self.hparams.train_N, 1, *self.domain.N)
 
     def loss(self, output, target):
         """ Default loss function """
