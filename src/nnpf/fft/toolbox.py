@@ -67,18 +67,19 @@ def fftconv(data, weight, bias=None, padding=0, padding_mode='zeros'):
 
     Massive test:
     >>> import itertools
-    >>> N_range = range(29, 33)
-    >>> k_range = range(9, 13)
-    >>> p_range = range(3, 7)
-    >>> m_range = ('zeros', 'reflect', 'circular')
+    >>> N_range = range(11, 15)
+    >>> k_range = range(11, 15)
+    >>> p_range = range(7)
+    >>> m_range = ('zeros', 'reflect', 'circular', 'replicate')
     >>> failed = set()
     >>> for N, k, p, m in itertools.product(N_range, k_range, p_range, m_range):
-    ...     x = torch.rand(5, 2, N)
-    ...     w = torch.rand(3, 2, k)
-    ...     xw = fftconv(x, w, padding=(p,), padding_mode=m)
-    ...     xw_ref = conv(x, w, padding=(p,), padding_mode=m)
-    ...     if xw.shape != xw_ref.shape or not torch.allclose(xw, xw_ref):
-    ...         failed.add((N, k, p, m))
+    ...     if N + 2 * p >= k:
+    ...         x = torch.rand(5, 2, N)
+    ...         w = torch.rand(3, 2, k)
+    ...         xw = fftconv(x, w, padding=(p,), padding_mode=m)
+    ...         xw_ref = conv(x, w, padding=(p,), padding_mode=m)
+    ...         if xw.shape != xw_ref.shape or not torch.allclose(xw, xw_ref):
+    ...             failed.add((N, k, p, m))
     >>> failed
     set()
 
@@ -100,9 +101,12 @@ def fftconv(data, weight, bias=None, padding=0, padding_mode='zeros'):
     elif isinstance(padding, int):
         padding = [padding] * dim
 
+    # Rely on FFT periodicity when possible to avoid unnecessary padding
+    use_periodicity = padding_mode == 'circular' and all(d >= k for d, k in zip(data.shape[2:], weight.shape[2:]))
+
     # Padding input
     # Not needed for circular padding, using periodicity of FFT
-    if padding_mode != 'circular':
+    if not use_periodicity:
         # See torch.nn.functional.pad doc about the reverse order of the padding spec
         input_padding = tuple(i for p in padding[::-1] for i in [p, p])
         data = pad(data, input_padding, mode=padding_mode)
@@ -112,12 +116,18 @@ def fftconv(data, weight, bias=None, padding=0, padding_mode='zeros'):
     def next_odd(n):
         return n if n % 2 else n + 1
 
-    # Padding weight and flip axes
-    # Flipping axes is faster than taking conjugate of data_hat before multiplication
-    #   because weight size is often lower than data size
+    # Calculating weight padding
     kernel_size = weight.shape[2:]
     weight_padding = [i for n, k in zip(data.shape[:1:-1], kernel_size[::-1])
                         for i in [(n - next_odd(k)) // 2, n - k - (n - next_odd(k)) // 2]]
+
+    # Fixing padding for the case when k == n and k in even (padding is negative otherwise)
+    fix_padding = [v if next_odd(k) > n else 0 for n, k in zip(data.shape[:1:-1], kernel_size[::-1]) for v in [1, -1]]
+    weight_padding = [v + f for v, f in zip(weight_padding, fix_padding)]
+
+    # Padding weight and flip axes
+    # Flipping axes is faster than taking conjugate of data_hat before multiplication
+    #   because weight size is often lower than data size
     weight = pad(weight, weight_padding).flip(tuple(range(2, weight.ndim)))
 
     # Forward transformation
@@ -135,12 +145,15 @@ def fftconv(data, weight, bias=None, padding=0, padding_mode='zeros'):
     output = ifftshift(output, axes=range(data.ndim - dim , data.ndim))
 
     # Output padding or truncating
-    if padding_mode == 'circular':
+    if use_periodicity:
         output_padding = [i for p, k in zip(padding[::-1], kernel_size[::-1])
                             for i in [p - k // 2, p - (k - 1 - k // 2)]]
     else:
         output_padding = [i for k in kernel_size[::-1]
                             for i in [- (k // 2), - (k - 1 - k // 2)]]
+
+    # Fixing output padding accordingly to the fix applied to the weight padding
+    output_padding = [v + f for v, f in zip(output_padding, fix_padding)]
     output = pad(output, output_padding, mode=padding_mode)
 
     # Bias
