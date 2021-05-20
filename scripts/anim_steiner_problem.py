@@ -92,7 +92,8 @@ s = shapes.periodic(s, bounds)
 
 # Phase field
 u = model.profil(s(*domain.X), model.hparams.epsilon)
-u = torch.min(u, model.profil(shapes.segment([0.5, 0.1],[0.5, 0.9])(*domain.X), model.hparams.epsilon)) 
+u = torch.min(u, model.profil(shapes.segment([0.5, 0.1],[0.5, 0.9])(*domain.X), model.hparams.epsilon))
+u = torch.min(u, model.profil(shapes.segment([0.1, 0.5],[0.9, 0.5])(*domain.X), model.hparams.epsilon))
 if args.revert:
     u = 1. - u
 
