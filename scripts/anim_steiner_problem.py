@@ -39,6 +39,7 @@ parser.add_argument("--revert", type=lambda s:bool(strtobool(s)), nargs='?', con
 parser.add_argument("--output", type=str, default="anim.avi", help="File name of the generated animation")
 parser.add_argument("--npoints", type=int, default=3, help="Number of points in Steiner problem")
 parser.add_argument("--seed", type=int, default=0, help="Seed when generating fixed points")
+parser.add_argument("--random_scale", type=float, default=1., help="Scale of the point's positions")
 
 args = parser.parse_args()
 
@@ -105,7 +106,7 @@ def dot_pos(theta):
     ]
 import random
 random.seed(args.seed)
-dots = shapes.union(*(shapes.translation(shapes.dot(args.lp_shape), dot_pos((i + random.random() - 0.5) * 2 * math.pi / args.npoints )) for i in range(args.npoints)))
+dots = shapes.union(*(shapes.translation(shapes.dot(args.lp_shape), dot_pos((i + args.random_scale * (random.random() - 0.5)) * 2 * math.pi / args.npoints )) for i in range(args.npoints)))
 dots_u = model.profil(dots(*domain.X), model.hparams.epsilon)
 
 # Graph
