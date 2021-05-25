@@ -337,10 +337,10 @@ class PhaseFieldShow(ImShow):
     >>> plt.savefig("doctest_PhaseFieldShow.png")
     >>> plt.pause(0.5)
     """
-    def __init__(self, *fields, X=None, **kwargs):
+    def __init__(self, *fields, X=None, cmap=plt.get_cmap("gist_rainbow"), **kwargs):
         super().__init__(self._get_array(*fields),
                          X=X,
-                         cmap=plt.get_cmap("gist_rainbow"),
+                         cmap=cmap,
                          vmin=0, vmax=max(1., len(fields) - 1),
                          **kwargs)
 
