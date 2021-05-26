@@ -322,6 +322,18 @@ def get_frame(fig=None):
 class PhaseFieldShow(ImShow):
     """ Show one or more phase field functions
 
+    Parameters
+    ----------
+    fields: Tensors
+        Phase fields
+    X: Tensors
+        Grid point coordinates
+    cmap: str or Colormap
+        Colormap to use
+    fmin, fmax: float
+        Minimum (far) and maximum (near) value of one field.
+        Phase field will be rescaled to [0, 1].
+
     Example
     -------
     >>> from nnpf.domain import Domain
@@ -337,7 +349,9 @@ class PhaseFieldShow(ImShow):
     >>> plt.savefig("doctest_PhaseFieldShow.png")
     >>> plt.pause(0.5)
     """
-    def __init__(self, *fields, X=None, cmap=plt.get_cmap("gist_rainbow"), **kwargs):
+    def __init__(self, *fields, X=None, cmap=plt.get_cmap("gist_rainbow"), fmin=0., fmax=1., **kwargs):
+        self.fmin = fmin
+        self.fmax = fmax
         super().__init__(self._get_array(*fields),
                          X=X,
                          cmap=cmap,
@@ -347,7 +361,11 @@ class PhaseFieldShow(ImShow):
     def update(self, *fields):
         return super().update(self._get_array(*fields))
 
+    def _rescale(self, fields):
+        return [(u - self.fmin) / (self.fmax - self.fmin) for u in fields]
+
     def _get_array(self, *fields):
+        fields = self._rescale(fields)
         if len(fields) == 1:
             fields = 1. - fields[0], fields[0]
         ampl_fn = lambda u: 1. - (1. + torch.cos(np.pi * u)) / 2
