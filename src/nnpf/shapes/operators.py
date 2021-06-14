@@ -6,6 +6,8 @@ import torch
 import functools
 import math
 
+from .utils import *
+
 
 __all__ = [
     "reduce",
@@ -229,23 +231,40 @@ def linear_extrusion(shape, axis=0):
 
     return dist
 
-def rotational_extrusion(shape, axis1=0, axis2=1):
+def rotational_extrusion(shape, axis1=0, axis2=1, p=2):
     """
     Rotational extrusion of a N-1 dimensional shape in the given plane and around the origin.
 
     Norm of the projection on the given plane will be passed as the first argument to the shape.
 
+    Parameters
+    ----------
+    shape: function
+        Shape to be extruded
+    axis1, axis2: int
+        Dimension of the plane in which the rotation is made
+    p: int or float
+        The p in the lp norm
+
     Example
     -------
     >>> from nnpf.domain import Domain
     >>> from nnpf import shapes
-    >>> domain = Domain([[-1, 1], [1, 1]], (256, 256))
+    >>> domain = Domain([[-1, 1], [-1, 1]], (256, 256))
     >>> s = shapes.rotational_extrusion(shapes.sphere(0.1, [0.7]), 0, 1)
     >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+
+    >>> domain = Domain([[-1, 1]] * 3, (64,) * 3)
+    >>> s = shapes.rotational_extrusion(shapes.box([0.6, 0.3], p=3.5), 0, 2, p=3.5) # Cylinder
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX, p=3.5).item() < 0.05
+    True
     """
 
     def dist(*X):
-        X = [torch.sqrt(X[axis1]**2 + X[axis2]**2)] + [x for i, x in enumerate(X) if i != axis1 and i != axis2]
+        X = [norm((X[axis1], X[axis2]), p=p)] + [x for i, x in enumerate(X) if i != axis1 and i != axis2]
         return shape(*X)
 
     return dist
