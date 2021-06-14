@@ -25,6 +25,8 @@ __all__ = [
     "displace",
     "transform",
     "rotate",
+    "linear_extrusion",
+    "rotational_extrusion",
 ]
 
 
@@ -186,14 +188,64 @@ def rotate(shape, theta, axis1=0, axis2=1):
     Rotates a shape in the plane defined by the two given axis.
 
     Not exact for lp-norm with p != 2 and theta not a multiple of pi/2.
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1], [1, 1]], (256, 256))
+    >>> s = shapes.rotate(shapes.box([0.7, 0.3]), 1.24, 0, 1)
+    >>> dist = s(*domain.X)
     """
+
+    theta = torch.as_tensor(theta)
 
     def dist(*X):
         X = list(X)
         X[axis1], X[axis2] = (
-            math.cos(theta) * X[axis1] + math.sin(theta) * X[axis2],
-            math.cos(theta) * X[axis2] - math.sin(theta) * X[axis1],
+            torch.cos(theta) * X[axis1] + torch.sin(theta) * X[axis2],
+            torch.cos(theta) * X[axis2] - torch.sin(theta) * X[axis1],
         )
+        return shape(*X)
+
+    return dist
+
+def linear_extrusion(shape, axis=0):
+    """ Extrude a N-1 dimensional shape along the given axis
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1], [1, 1]], (256, 256))
+    >>> s = shapes.linear_extrusion(shapes.sphere(0.1, [0.7]), 1)
+    >>> dist = s(*domain.X)
+    """
+
+    def dist(*X):
+        idx = [slice(None) if i != axis else 0 for i in range(X[0].ndim)]
+        d = shape(*(x[idx] for i, x in enumerate(X) if i != axis))
+        return d.unsqueeze(axis).expand_as(X[0])
+
+    return dist
+
+def rotational_extrusion(shape, axis1=0, axis2=1):
+    """
+    Rotational extrusion of a N-1 dimensional shape in the given plane and around the origin.
+
+    Norm of the projection on the given plane will be passed as the first argument to the shape.
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1], [1, 1]], (256, 256))
+    >>> s = shapes.rotational_extrusion(shapes.sphere(0.1, [0.7]), 0, 1)
+    >>> dist = s(*domain.X)
+    """
+
+    def dist(*X):
+        X = [torch.sqrt(X[axis1]**2 + X[axis2]**2)] + [x for i, x in enumerate(X) if i != axis1 and i != axis2]
         return shape(*X)
 
     return dist
