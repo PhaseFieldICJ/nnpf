@@ -20,6 +20,7 @@ __all__ = [
     "segment",
     "capsule",
     "arc",
+    "ring",
 ]
 
 
@@ -252,4 +253,21 @@ def arc(radius, theta_start, theta_stop=None, p=2, weights=None):
         return torch.where(side >= 0, sphere_dist(*X), torch.min(start_dist(*X), stop_dist(*X)))
 
     return dist
+
+def ring(radius, axis1=0, axis2=1):
+    """ N-1 dimensional ring
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 3, [64] * 3)
+    >>> s = shapes.ring(0.5, axis1=1, axis2=2)
+    >>> dist = s(*domain.X)
+    """
+    return rotational_extrusion(
+        translation(dot(), [radius] + [0]*10),
+        axis1=axis1, axis2=axis2,
+    )
+
 
