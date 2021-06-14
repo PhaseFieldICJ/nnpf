@@ -4,6 +4,7 @@ Signed distances functions
 
 import torch
 import math
+import itertools
 
 from .operators import *
 from .utils import *
@@ -21,18 +22,49 @@ __all__ = [
     "capsule",
     "arc",
     "ring",
+    "box_wireframe",
 ]
 
 
 def dot(p=2, weights=None):
-    """ Signed lp distance to a dot """
+    """ Signed lp distance to a dot
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 3, [64] * 3)
+    >>> s = shapes.dot()
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    >>> s = shapes.dot(p=3)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX, p=3).item() < 0.05
+    True
+    """
     def dist(*X):
         return norm(X, p, weights)
 
     return dist
 
 def sphere(radius, center=None, p=2, weights=None):
-    """ Signed distance to a sphere """
+    """ Signed distance to a sphere
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 3, [64] * 3)
+    >>> s = shapes.sphere(0.5, center=[0.1, -0.2, 0.3])
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    >>> s = shapes.sphere(0.5, center=[0.1, -0.2, 0.3], p=3)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX, p=3).item() < 0.05
+    True
+    """
     if center is None:
         return rounding(dot(p, weights), radius)
     else:
@@ -44,6 +76,16 @@ def ellipse(radius):
     Source: https://iquilezles.org/www/articles/ellipsedist/ellipsedist.htm
 
     Doesn't work well due to loss of precision during computation aroung the axe of the great radius.
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 2, [256] * 2)
+    >>> s = shapes.ellipse([0.2, 0.5])
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
     """
 
     def msign(v):
@@ -114,7 +156,22 @@ def ellipse(radius):
 
 
 def box(sizes, p=2, weights=None):
-    """ Signed distance to a box """
+    """ Signed distance to a box
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 3, [64] * 3)
+    >>> s = shapes.box([0.1, 0.2, 0.3])
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    >>> s = shapes.box([0.1, 0.2, 0.3], p=3)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX, p=3).item() < 0.05
+    True
+    """
     return elongate(dot(p, weights), sizes)
 
 def half_plane(dim_or_normal, pt_or_shift=0., normalize=False):
@@ -131,6 +188,16 @@ def half_plane(dim_or_normal, pt_or_shift=0., normalize=False):
         If iterable, a point that lies on the line
     normalize: bool
         True to normalize the given normal before applying the shift
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 3, [64] * 3)
+    >>> s = shapes.half_plane([0.1, -0.3, 0.2], pt_or_shift=0.2, normalize=True)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
     """
     pt_or_shift = torch.as_tensor(pt_or_shift)
     dim_or_normal = torch.as_tensor(dim_or_normal)
@@ -174,6 +241,16 @@ def beam(dim_or_normal, thickness, pt_or_shift=0., normalize=False):
         If iterable, a point that lies on the center line
     normalize: bool
         True to normalize the given normal before applying the shift
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 2, [256] * 2)
+    >>> s = shapes.beam([0.1, -0.3], thickness=0.1, pt_or_shift=0.2, normalize=True)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
     """
     return rounding(line(dim_or_normal, pt_or_shift, normalize), thickness / 2)
 
@@ -191,11 +268,32 @@ def line(dim_or_normal, pt_or_shift=0., normalize=False):
         If iterable, a point that lies on the line
     normalize: bool
         True to normalize the given normal before applying the shift
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 2, [256] * 2)
+    >>> s = shapes.line([0.1, -0.3], 0.2, normalize=True)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
     """
     return unsign(half_plane(dim_or_normal, pt_or_shift, normalize))
 
 def segment(a, b):
-    """ Segment between two points """
+    """ Segment between two points
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 3, [64] * 3)
+    >>> s = shapes.segment([-0.8, -0.7, 0.2], [0.2, 0.5, -0.1])
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    """
     a = torch.as_tensor(a)
     b = torch.as_tensor(b)
     ab = b - a
@@ -208,7 +306,18 @@ def segment(a, b):
     return dist
 
 def capsule(a, b, thickness):
-    """ Capsule between two points """
+    """ Capsule between two points
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 3, [64] * 3)
+    >>> s = shapes.capsule([-0.8, -0.7, 0.2], [0.2, 0.5, -0.1], 0.1)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    """
     return rounding(segment(a, b), thickness / 2)
 
 def arc(radius, theta_start, theta_stop=None, p=2, weights=None):
@@ -229,6 +338,20 @@ def arc(radius, theta_start, theta_stop=None, p=2, weights=None):
         If None, the arc ends at 2pi - theta_start (clockwise).
     p: int or float
         The p in the lp norm.
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 2, [256] * 2)
+    >>> s = shapes.arc(0.5, 0.1, 1.2)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    >>> s = shapes.arc(0.5, 0.1, 1.2, p=3)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX, p=3).item() < 0.05
+    True
     """
     if theta_stop is None:
         theta_stop = 2 * math.pi - theta_start
@@ -264,10 +387,41 @@ def ring(radius, axis1=0, axis2=1):
     >>> domain = Domain([[-1, 1]] * 3, [64] * 3)
     >>> s = shapes.ring(0.5, axis1=1, axis2=2)
     >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
     """
     return rotational_extrusion(
         translation(dot(), [radius] + [0]*10),
         axis1=axis1, axis2=axis2,
     )
 
+def box_wireframe(sizes):
+    """ Wireframe of a box
+
+    As union of each edge.
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 3, [64] * 3)
+    >>> s = shapes.box_wireframe([1., 0.5, 0.7])
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    """
+
+    vertices = torch.tensor(
+        list(itertools.product(
+            *([-s/2, s/2] for s in sizes)
+        ))
+    )
+
+    edges = [
+        segment(p1, p2)
+        for p1 in vertices for p2 in vertices
+        if torch.count_nonzero(p1 != p2) == 1 # Hamming distance of 1
+    ]
+
+    return union(*edges)
 
