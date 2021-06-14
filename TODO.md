@@ -28,4 +28,4 @@
 - TensorBoardScalar can merge multiple files
 - fix Tracing issues
 - train action populates command-line arguments from class constructor
-
+- check 64 bits, also when loading
