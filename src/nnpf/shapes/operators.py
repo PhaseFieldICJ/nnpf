@@ -29,6 +29,7 @@ __all__ = [
     "rotate",
     "linear_extrusion",
     "rotational_extrusion",
+    "expand_dim",
 ]
 
 
@@ -266,6 +267,39 @@ def rotational_extrusion(shape, axis1=0, axis2=1, p=2):
     def dist(*X):
         X = [norm((X[axis1], X[axis2]), p=p)] + [x for i, x in enumerate(X) if i != axis1 and i != axis2]
         return shape(*X)
+
+    return dist
+
+def expand_dim(shape, axes, p=2):
+    """
+    Immerses a shape in a higher dimensional space
+
+    Parameters
+    ----------
+    shape: function
+        The shape
+    axes: iterable of int
+        Dimensions where the shape is defined
+    p: int or float
+        The p in the lp norm
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 3, (64,) * 3)
+    >>> s = shapes.expand_dim(shapes.box([0.6, 0.3], p=3.5), [0, 2], p=3.5)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX, p=3.5).item() < 0.05
+    True
+    """
+
+    def dist(*X):
+        return norm(
+            [torch.clamp(shape(*(X[i] for i in axes)), min=0.)]
+            + [x for i, x in enumerate(X) if i not in axes],
+            p=p
+        )
 
     return dist
 
