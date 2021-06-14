@@ -144,7 +144,18 @@ def replicate(shape, periods, limits=None):
     return dist
 
 def onion(shape, thickness):
-    """ Makes a shape annular with given thickness """
+    """ Makes a shape annular with given thickness
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 2, [256] * 2)
+    >>> s = shapes.onion(shapes.box([1., 0.75], p=3.5), 0.1)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX, p=3.5).item() < 0.05
+    True
+    """
     def dist(*X):
         return shape(*X).abs() - thickness
 
@@ -199,6 +210,8 @@ def rotate(shape, theta, axis1=0, axis2=1):
     >>> domain = Domain([[-1, 1], [1, 1]], (256, 256))
     >>> s = shapes.rotate(shapes.box([0.7, 0.3]), 1.24, 0, 1)
     >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
     """
 
     theta = torch.as_tensor(theta)
@@ -223,6 +236,8 @@ def linear_extrusion(shape, axis=0):
     >>> domain = Domain([[-1, 1], [1, 1]], (256, 256))
     >>> s = shapes.linear_extrusion(shapes.sphere(0.1, [0.7]), 1)
     >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
     """
 
     def dist(*X):
