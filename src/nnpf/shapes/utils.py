@@ -9,6 +9,7 @@ import torch
 __all__ = [
     "norm",
     "dot_product",
+    "gradient_norm",
     "check_dist",
 ]
 
@@ -49,7 +50,7 @@ def dot_product(A, B):
     return sum(a * b for a, b in zip(A, B))
 
 
-def check_dist(dist, dX, p=2):
+def gradient_norm(dist, dX, p=2):
     """
     Returns the norm of the gradient of the signed distance using the dual norm of lp (ie l^{p/(p-1)}).
 
@@ -76,4 +77,11 @@ def check_dist(dist, dX, p=2):
         dp = p / (p - 1)
 
     return norm(ddist, dp)
+
+def check_dist(dist, dX, p=2, tol=1e-1):
+    """
+    Check given distance by calculating its gradient norm and returning error ratio
+    """
+    error_cnt = torch.count_nonzero((gradient_norm(dist, dX, p=p) - 1).abs() > tol)
+    return error_cnt / dist.numel()
 
