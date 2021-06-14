@@ -168,8 +168,8 @@ class KernelCumSumShow(ImShow):
 class DiffusionIsotropyShow:
     """ Illustrate diffusion operator isotropy on a sphere for Lp-norm """
     def __init__(self, operator, ax=None, fig=None, p=2, N=10):
-        from shapes import sphere
-        from phase_field import profil
+        from nnpf.shapes import sphere
+        from nnpf.functional.phase_field import profil
 
         domain = operator.domain
         center = [0.5 * (a + b) for a, b in domain.bounds]
