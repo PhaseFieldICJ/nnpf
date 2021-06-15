@@ -426,17 +426,21 @@ def box_wireframe(sizes):
 
     return union(*edges)
 
-def mobius_strip(r1, r2, k=1, border_only=False):
+def mobius_strip(r1, r2, k=1, arms=2, border_only=False):
     """ Möbius strip
 
     In 3D only, and in the xy plane.
 
     Parameters
     ----------
-    r1, r2: float
-        Internal and external radius
+    r1: float
+        Radius of the middle circle
+    r2: float
+        Radius of the profil
     k: int
-        Number of rotation
+        Number of 1/arms rotations
+    arms: int
+        Number of arms of the profil (2 for the strip)
     border_only: bool
         if True, generates only the border of the strip
 
@@ -445,32 +449,34 @@ def mobius_strip(r1, r2, k=1, border_only=False):
     >>> from nnpf.domain import Domain
     >>> from nnpf import shapes
     >>> domain = Domain([[-1, 1]] * 3, [64] * 3)
-    >>> s = shapes.mobius_strip(0.5, 0.9)
+    >>> s = shapes.mobius_strip(0.7, 0.2)
     >>> dist = s(*domain.X)
     >>> check_dist(dist, domain.dX).item() < 0.05
     True
-    >>> s = shapes.mobius_strip(0.5, 0.9, border_only=True)
+    >>> s = shapes.mobius_strip(0.7, 0.2, border_only=True)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    >>> s = shapes.mobius_strip(0.7, 0.2, arms=3)
     >>> dist = s(*domain.X)
     >>> check_dist(dist, domain.dX).item() < 0.05
     True
     """
 
-    center = [(r1 + r2) / 2, 0.]
-    if border_only:
-        s = union(dot(center=[r1, 0]), dot(center=[r2, 0]))
-    else:
-        s = segment([r1, 0], [r2, 0])
+    return rotational_twist(
+        translation(cross(r2, arms=arms, dots_only=border_only), [r1, 0.]),
+        [r1, 0.],
+        k = k / arms,
+    )
 
-    return rotational_twist(s, center, k)
-
-def cross(radius=1., k=4, dots_only=False):
-    """ A 2D cross with k arms
+def cross(radius=1., arms=4, dots_only=False):
+    """ A 2D cross with given number of arms
 
     Parameters
     ----------
     radius: float
         Radius of the cross
-    k: int
+    arms: int
         Number of arms
     dots_only: bool
         if True, generates only extremal points of the cross
@@ -480,18 +486,20 @@ def cross(radius=1., k=4, dots_only=False):
     >>> from nnpf.domain import Domain
     >>> from nnpf import shapes
     >>> domain = Domain([[-1, 1]] * 2, [256] * 2)
-    >>> s = shapes.cross(0.5, k=5)
+    >>> s = shapes.cross(0.5, arms=5)
     >>> dist = s(*domain.X)
     >>> check_dist(dist, domain.dX).item() < 0.05
     True
-    >>> s = shapes.cross(0.5, k=5, dots_only=True)
+    >>> s = shapes.cross(0.5, arms=5, dots_only=True)
     >>> dist = s(*domain.X)
     >>> check_dist(dist, domain.dX).item() < 0.05
     True
     """
     def dist(*X):
         assert len(X) == 2, "Cross is only defined in 2D"
-        theta = (torch.atan2(X[1], X[0]) + (2 + 1/k) * math.pi).fmod(2 * math.pi / k) - math.pi / k
+        theta = torch.fmod(
+            torch.atan2(X[1], X[0]) + (2 + 1 / arms) * math.pi,
+            2 * math.pi / arms) - math.pi / arms
         length = norm(X)
 
         if dots_only:

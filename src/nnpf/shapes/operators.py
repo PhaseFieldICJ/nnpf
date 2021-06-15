@@ -315,10 +315,10 @@ def rotational_twist(shape, center, k, axis1=0, axis2=1):
     >>> from nnpf import shapes
     >>> domain = Domain([[-1, 1]] * 3, (64,) * 3)
     >>> s = shapes.translation(
-    ...     shapes.cross(radius=0.2, k=4),
+    ...     shapes.cross(radius=0.2, arms=4),
     ...     [0.7, 0.]
     ... )
-    >>> s = shapes.rotational_twist( s, center=[0.7, 0], k=0.5)
+    >>> s = shapes.rotational_twist(s, center=[0.7, 0], k=0.25)
     >>> dist = s(*domain.X)
     >>> check_dist(dist, domain.dX).item() < 0.05
     True
@@ -330,8 +330,8 @@ def rotational_twist(shape, center, k, axis1=0, axis2=1):
     def dist(*X):
         assert len(X) == 3, "Rotational twist works only in 3D"
         theta = torch.atan2(X[axis2], X[axis1])
-        tcos = torch.cos((k / 2) * theta)
-        tsin = torch.sin((k / 2) * theta)
+        tcos = torch.cos(k * theta)
+        tsin = torch.sin(k * theta)
         X = [norm((X[axis1], X[axis2])) - center[0], X[axis3] - center[1]]
 
         return shape(
