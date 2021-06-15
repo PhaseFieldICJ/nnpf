@@ -23,10 +23,12 @@ __all__ = [
     "arc",
     "ring",
     "box_wireframe",
+    "mobius_strip",
+    "cross",
 ]
 
 
-def dot(p=2, weights=None):
+def dot(p=2, weights=None, center=None):
     """ Signed lp distance to a dot
 
     Example
@@ -43,10 +45,12 @@ def dot(p=2, weights=None):
     >>> check_dist(dist, domain.dX, p=3).item() < 0.05
     True
     """
-    def dist(*X):
-        return norm(X, p, weights)
-
-    return dist
+    if center is None:
+        def dist(*X):
+            return norm(X, p, weights)
+        return dist
+    else:
+        return translation(dot(p=p, weights=weights), center)
 
 def sphere(radius, center=None, p=2, weights=None):
     """ Signed distance to a sphere
@@ -65,10 +69,7 @@ def sphere(radius, center=None, p=2, weights=None):
     >>> check_dist(dist, domain.dX, p=3).item() < 0.05
     True
     """
-    if center is None:
-        return rounding(dot(p, weights), radius)
-    else:
-        return translation(sphere(radius, p=p, weights=weights), center)
+    return rounding(dot(p=p, weights=weights, center=center), radius)
 
 def ellipse(radius):
     """ Signed distance to an ellipse (2D only)
@@ -424,4 +425,85 @@ def box_wireframe(sizes):
     ]
 
     return union(*edges)
+
+def mobius_strip(r1, r2, k=1, border_only=False):
+    """ Möbius strip
+
+    In 3D only, and in the xy plane.
+
+    Parameters
+    ----------
+    r1, r2: float
+        Internal and external radius
+    k: int
+        Number of rotation
+    border_only: bool
+        if True, generates only the border of the strip
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 3, [64] * 3)
+    >>> s = shapes.mobius_strip(0.5, 0.9)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    >>> s = shapes.mobius_strip(0.5, 0.9, border_only=True)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    """
+
+    center = [(r1 + r2) / 2, 0.]
+    if border_only:
+        s = union(dot(center=[r1, 0]), dot(center=[r2, 0]))
+    else:
+        s = segment([r1, 0], [r2, 0])
+
+    return rotational_twist(s, center, k)
+
+def cross(radius=1., k=4, dots_only=False):
+    """ A 2D cross with k arms
+
+    Parameters
+    ----------
+    radius: float
+        Radius of the cross
+    k: int
+        Number of arms
+    dots_only: bool
+        if True, generates only extremal points of the cross
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 2, [256] * 2)
+    >>> s = shapes.cross(0.5, k=5)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    >>> s = shapes.cross(0.5, k=5, dots_only=True)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    """
+    def dist(*X):
+        assert len(X) == 2, "Cross is only defined in 2D"
+        theta = (torch.atan2(X[1], X[0]) + (2 + 1/k) * math.pi).fmod(2 * math.pi / k) - math.pi / k
+        length = norm(X)
+
+        if dots_only:
+            return norm([
+                length * torch.cos(theta) - radius,
+                length * torch.sin(theta)
+            ])
+        else:
+            return norm([
+                torch.clamp(length * torch.cos(theta) - radius, min=0),
+                length * torch.sin(theta)
+            ])
+
+    return dist
 

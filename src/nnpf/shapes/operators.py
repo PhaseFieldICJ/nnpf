@@ -29,6 +29,7 @@ __all__ = [
     "rotate",
     "linear_extrusion",
     "rotational_extrusion",
+    "rotational_twist",
     "expand_dim",
 ]
 
@@ -282,6 +283,61 @@ def rotational_extrusion(shape, axis1=0, axis2=1, p=2):
     def dist(*X):
         X = [norm((X[axis1], X[axis2]), p=p)] + [x for i, x in enumerate(X) if i != axis1 and i != axis2]
         return shape(*X)
+
+    return dist
+
+def rotational_twist(shape, center, k, axis1=0, axis2=1):
+    """
+    Rotational extrusion of a twisted 2 dimensional shape
+
+    Norm of the projection on the given plane will be passed as the first argument to the shape.
+    Twist is applied as a rotation of k times the argument of (axis1, axis2)
+    and around given center.
+
+    Note1: only works in 3D and for 2D shape.
+    Note2: the rotation of given shape of angle 2k\pi must return the same shape.
+    Note3: this operation doesn't preserve the distance. Error increases with k.
+
+    Parameters
+    ----------
+    shape: function
+        A 2D shape to be extruded
+    center: iteratable of float
+        Rotation center of the 2D shape
+    k: int or float
+        Number of full rotation applied along the circle path
+    axis1, axis2: int
+        Dimension of the plane in which the rotation is made
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 3, (64,) * 3)
+    >>> s = shapes.translation(
+    ...     shapes.cross(radius=0.2, k=4),
+    ...     [0.7, 0.]
+    ... )
+    >>> s = shapes.rotational_twist( s, center=[0.7, 0], k=0.5)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    """
+    center = torch.as_tensor(center)
+    assert len(center) == 2, "Center must be specified for the 2D shape"
+    axis3 = 3 - axis1 - axis2
+
+    def dist(*X):
+        assert len(X) == 3, "Rotational twist works only in 3D"
+        theta = torch.atan2(X[axis2], X[axis1])
+        tcos = torch.cos((k / 2) * theta)
+        tsin = torch.sin((k / 2) * theta)
+        X = [norm((X[axis1], X[axis2])) - center[0], X[axis3] - center[1]]
+
+        return shape(
+            center[0] + (tcos * X[0] + tsin * X[1]),
+            center[1] + (tcos * X[1] - tsin * X[0]),
+        )
 
     return dist
 
