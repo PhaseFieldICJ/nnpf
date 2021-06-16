@@ -37,6 +37,8 @@ class Domain:
             [-1.0000, -0.5000,  0.0000,  0.5000,  1.0000],
             [-1.0000, -0.5000,  0.0000,  0.5000,  1.0000],
             [-1.0000, -0.5000,  0.0000,  0.5000,  1.0000]])
+    >>> d.dX
+    tensor([0.2500, 0.5000])
     >>> d.K[0]
     tensor([[ 0.,  0.,  0.],
             [ 1.,  1.,  1.],
@@ -99,7 +101,7 @@ class Domain:
     @property
     def dX(self):
         """ Space steps """
-        return torch.Tensor([(b - a) / n for (a, b), n in zip(self.bounds, self.N)])
+        return torch.Tensor([(b - a) / (n - 1) for (a, b), n in zip(self.bounds, self.N)])
 
     @property
     def K(self):
