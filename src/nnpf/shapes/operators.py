@@ -31,6 +31,7 @@ __all__ = [
     "rotational_extrusion",
     "rotational_twist",
     "expand_dim",
+    "twist",
 ]
 
 
@@ -369,6 +370,52 @@ def expand_dim(shape, axes, p=2):
             + [x for i, x in enumerate(X) if i not in axes],
             p=p
         )
+
+    return dist
+
+def twist(shape, w, param_axis=2, rot_axis1=0, rot_axis2=1):
+    """
+    Twist a shape along a given axis.
+
+    Rotate the shape in the plane (rot_axis1, rot_axis2) by a rotation linearly
+    dependant on the projection on axe param_axis.
+
+    Note: not exact!
+
+    Parameters
+    ----------
+    shape: function
+        Shape to be twisted
+    w: real
+        Rotation speed
+    param_axis: int
+        Coordinate used as rotation parameter
+    rot_axis1, rot_axis2: int
+        Rotation plane
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1]] * 3, (64,) * 3)
+    >>> s = shapes.linear_extrusion(
+    ...     shapes.sphere(0.2, [0.5, 0.]),
+    ...     axis=2
+    ... )
+    >>> s = shapes.twist(s, 0.9, 2, 0, 1)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    """
+
+    def dist(*X):
+        theta = X[param_axis] * w
+        tcos = torch.cos(theta)
+        tsin = torch.sin(theta)
+        XX = [x for x in X]
+        XX[rot_axis1] = tcos * X[rot_axis1] + tsin * X[rot_axis2]
+        XX[rot_axis2] = tcos * X[rot_axis2] - tsin * X[rot_axis1]
+        return shape(*XX)
 
     return dist
 
