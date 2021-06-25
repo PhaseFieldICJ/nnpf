@@ -242,9 +242,7 @@ def linear_extrusion(shape, axis=0):
     """
 
     def dist(*X):
-        idx = [slice(None) if i != axis else 0 for i in range(X[0].ndim)]
-        d = shape(*(x[idx] for i, x in enumerate(X) if i != axis))
-        return d.unsqueeze(axis).expand_as(X[0])
+        return shape(*(x for i, x in enumerate(X) if i != axis))
 
     return dist
 
