@@ -32,6 +32,7 @@ __all__ = [
     "rotational_twist",
     "expand_dim",
     "twist",
+    "fit",
 ]
 
 
@@ -418,4 +419,50 @@ def twist(shape, w, param_axis=2, rot_axis1=0, rot_axis2=1):
         return shape(*XX)
 
     return dist
+
+def fit(shape, from_bounds, to_bounds):
+    """
+    Scale and translate a shape accordingly to a bounds mapping.
+
+    Scale is calculated in order to keep aspect ratio of the given shape
+    and so that transformed input domain is included in output domain.
+
+    Parameters
+    ----------
+    shape: function
+        Shape to be fitted
+    from_domain, to_domain: iterable of pair of float
+        Input and output bounds (iterable of bounds along each dimension)
+
+    Example
+    -------
+    >>> from nnpf import shapes
+    >>> s = shapes.fit(
+    ...     shapes.sphere(0.2, [0.5, 0.]),
+    ...     [[-1, 1]] * 2,
+    ...     [[0, 4], [0, 6]],
+    ... )
+    >>> torch.allclose(
+    ...     s(torch.tensor(3.), torch.tensor(3.)),
+    ...     torch.tensor(-0.4),
+    ... )
+    True
+
+    >>> from nnpf.domain import Domain
+    >>> domain = Domain([[0, 4], [0, 6]] , (256,) * 2)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    """
+
+    from_extent = [b - a for a, b in from_bounds]
+    to_extent = [b - a for a, b in to_bounds]
+    from_center = [(a + b) / 2 for a, b in from_bounds]
+    to_center = [(a + b) / 2 for a, b in to_bounds]
+    assert len(from_extent) == len(to_extent), "Input and output bounds must be of same dimension"
+
+    scale = min(t / f for f, t in zip(from_extent, to_extent))
+    shift = [t - f * scale for f, t in zip(from_center, to_center)]
+
+    return translation(scaling(shape, scale), shift)
 
