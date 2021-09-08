@@ -31,9 +31,12 @@ class TensorBoardScalars:
     >>> sorted(tbs.scalars)
     ['epoch', 'hp_metric', 'train_loss', 'val_loss']
     >>> wall_time, rel_time, step, value = tbs["val_loss"]
+
+    >>> import numpy as np
+    >>> np.set_printoptions(precision=6)
     >>> value
-    array([1.65534616, 1.63326979, 1.61121798, 1.5891999 , 1.5672245 ,
-           1.54530096, 1.52343798, 1.50164437, 1.47992933, 1.45830166])
+    array([1.655346, 1.63327 , 1.611218, 1.5892  , 1.567225, 1.545301,
+           1.523438, 1.501644, 1.479929, 1.458302])
     """
 
     def __init__(self, path):
