@@ -94,7 +94,7 @@ class Trainer(pl.Trainer):
                 monitor='hp_metric',
                 save_top_k=1,
                 mode='min',
-                every_n_val_epochs=1,
+                every_n_epochs=1,
                 save_last=True,
             ))
 

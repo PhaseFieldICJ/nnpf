@@ -195,7 +195,7 @@ def display_model_infos(model_or_path, recursive=True, use_torch_info=True, inpu
     Training a model:
     >>> from nnpf.models import Reaction
     >>> from nnpf.trainer import Trainer
-    >>> trainer = Trainer(default_root_dir="logs_doctest", name="Reaction", version="test_model_infos", max_epochs=1)
+    >>> trainer = Trainer(default_root_dir="logs_doctest", name="Reaction", version="test_model_infos", max_epochs=1, log_every_n_steps=1)
     >>> model = Reaction(train_N=10, val_N=20, seed=0, num_workers=4)
     >>> import contextlib, io
     >>> with contextlib.redirect_stdout(io.StringIO()):

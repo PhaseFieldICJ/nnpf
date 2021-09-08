@@ -30,14 +30,14 @@ class AllenCahnSplitting(AllenCahnProblem):
     >>> from nnpf.models import Reaction, HeatArray
     >>> from nnpf.trainer import Trainer
 
-    >>> trainer = Trainer(default_root_dir="logs_doctest", name="Reaction", version="test_splitting", max_epochs=1)
+    >>> trainer = Trainer(default_root_dir="logs_doctest", name="Reaction", version="test_splitting", max_epochs=1, log_every_n_steps=1)
     >>> model = Reaction(train_N=10, val_N=20, seed=0, num_workers=4)
     >>> import contextlib, io
     >>> with contextlib.redirect_stdout(io.StringIO()):
     ...     with contextlib.redirect_stderr(io.StringIO()):
     ...         trainer.fit(model)
 
-    >>> trainer = Trainer(default_root_dir="logs_doctest", name="HeatArray", version="test_splitting", max_epochs=1)
+    >>> trainer = Trainer(default_root_dir="logs_doctest", name="HeatArray", version="test_splitting", max_epochs=1, log_every_n_steps=1)
     >>> model = HeatArray(N=64, train_N=10, val_N=20, num_workers=4)
     >>> import contextlib, io
     >>> with contextlib.redirect_stdout(io.StringIO()):
@@ -47,7 +47,7 @@ class AllenCahnSplitting(AllenCahnProblem):
     After launching examples from heat_array_model and reaction_model:
     >>> import os
     >>> from nnpf.trainer import Trainer
-    >>> trainer = Trainer(default_root_dir="logs_doctest", name="AllenCahnSplitting", version="test_splitting", max_epochs=1)
+    >>> trainer = Trainer(default_root_dir="logs_doctest", name="AllenCahnSplitting", version="test_splitting", max_epochs=1, log_every_n_steps=1)
     >>> model = AllenCahnSplitting(
     ...     [os.path.join('logs_doctest', 'HeatArray', 'test_splitting'), os.path.join('logs_doctest', 'Reaction', 'test_splitting')],
     ...     test_N=10,
