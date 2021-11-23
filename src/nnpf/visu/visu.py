@@ -1,5 +1,6 @@
 """ Visualization tools """
 
+import matplotlib
 import matplotlib.pyplot as plt
 import torch
 import torch.fft
@@ -409,9 +410,14 @@ class AnimWriter:
     def __exit__(self, type, value, traceback):
         self.close()
 
-    def add_frame(self, fig=None):
-        if not self.do_nothing:
+    def add_frame(self, fig_or_img=None):
+        if self.do_nothing:
+            return
+
+        if isinstance(fig_or_img, matplotlib.figure.Figure):
             self.writer.append_data(get_frame(fig))
+        else:
+            self.writer.append_data(fig_or_img)
 
     def close(self):
         if not self.do_nothing:
