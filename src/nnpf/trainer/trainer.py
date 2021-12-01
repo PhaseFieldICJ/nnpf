@@ -122,8 +122,8 @@ class Trainer(pl.Trainer):
         parser = super().add_argparse_args(parent_parser)
         parser.add_argument('--version', help="Experiment version for the logger")
         parser.add_argument('--name', help="Experiment name for the logger")
-        parser.add_argument('--log_graph', type=lambda v: bool(strtobool(v)), nargs='?', const=True, help="Calculates and log the computational graph of the model")
-        parser.add_argument('--force_gpu', type=lambda v: bool(strtobool(v)), nargs='?', const=True, help="Force model and dataset to be on the GPU (may fail if not enough RAM)")
+        parser.add_argument('--log_graph', type=lambda v: bool(strtobool(v)), nargs='?', default=False, const=True, help="Calculates and log the computational graph of the model")
+        parser.add_argument('--force_gpu', type=lambda v: bool(strtobool(v)), nargs='?', default=False, const=True, help="Force model and dataset to be on the GPU (may fail if not enough RAM)")
         parser.set_defaults(**{**get_default_args(Trainer), **defaults})
         return parser
 
