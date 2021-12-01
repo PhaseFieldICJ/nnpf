@@ -71,7 +71,7 @@ class Trainer(pl.Trainer):
     """
 
     @merge_signature(pl.Trainer.__init__)
-    def __init__(self, version=None, name=None, log_graph=False, **kwargs):
+    def __init__(self, version=None, name=None, log_graph=False, force_gpu=False, **kwargs):
 
         # Logger
         if kwargs.get('logger', True) is True:
@@ -98,10 +98,16 @@ class Trainer(pl.Trainer):
                 save_last=True,
             ))
 
+        # Force GPU
+        if force_gpu:
+            kwargs["gpus"] = max(1, kwargs.get("gpus") or 0)
+
         # Create trainer
         super().__init__(
             **kwargs
         )
+
+        self.force_gpu = force_gpu
 
         # Creating log folder
         path = os.path.join(self.logger.log_dir, "checkpoints")
@@ -117,10 +123,11 @@ class Trainer(pl.Trainer):
         parser.add_argument('--version', help="Experiment version for the logger")
         parser.add_argument('--name', help="Experiment name for the logger")
         parser.add_argument('--log_graph', type=lambda v: bool(strtobool(v)), nargs='?', const=True, help="Calculates and log the computational graph of the model")
+        parser.add_argument('--force_gpu', type=lambda v: bool(strtobool(v)), nargs='?', const=True, help="Force model and dataset to be on the GPU (may fail if not enough RAM)")
         parser.set_defaults(**{**get_default_args(Trainer), **defaults})
         return parser
 
-    def fit(self, model, *args, **kwargs):
+    def fit(self, model, train_dataloaders = None, val_dataloaders = None, *args, **kwargs):
         # Disabing TensorBoardLogger.log_metrics since log_hyperparams
         # call log_metrics with step always set to 0, leading to a zigzag
         # in the graph
@@ -137,7 +144,50 @@ class Trainer(pl.Trainer):
         # Restoring TensorBoard.log_metrics
         self.logger.log_metrics = log_metrics
 
-        super().fit(model, *args, **kwargs)
+        # Force GPU
+        if self.force_gpu:
+            if train_dataloaders is None or val_dataloaders is None:
+                model.prepare_data()
+                #model.setup_data() # FIXME: is that needed?
+
+            if train_dataloaders is None:
+                try:
+                    train_dataloaders = model.train_dataloader()
+                except AttributeError:
+                    pass
+
+            if val_dataloaders is None:
+                try:
+                    val_dataloaders = model.val_dataloader()
+                except AttributeError:
+                    pass
+
+            from torch.utils.data import DataLoader, TensorDataset
+            def move_to(dl, device='cuda'):
+                if not isinstance(dl, DataLoader):
+                    raise ValueError(f"Unsupported transfer to {device} for dataloader of type {type(dl).__name__}")
+                if not isinstance(dl.dataset, TensorDataset):
+                    raise ValueError(f"Unsupported transfer to {device} for dataset of type {type(dl.dataset).__name__}")
+                from copy import deepcopy
+                # FIXME: need a cleaner way to recreate the same DataLoader but with a customized dataset
+                dl = deepcopy(dl)
+                dl.dataset.tensors = tuple(ts.to(device) for ts in dl.dataset.tensors)
+                return dl
+
+            from warnings import warn
+            if train_dataloaders is not None:
+                try:
+                    train_dataloaders = move_to(train_dataloaders, 'cuda')
+                except ValueError as e:
+                    warn(str(e))
+
+            if val_dataloaders is not None:
+                try:
+                    val_dataloaders = move_to(val_dataloaders, 'cuda')
+                except ValueError as e:
+                    warn(str(e))
+
+        super().fit(model, train_dataloaders, val_dataloaders, *args, **kwargs)
 
     def train(self):
         # Saving initial state
