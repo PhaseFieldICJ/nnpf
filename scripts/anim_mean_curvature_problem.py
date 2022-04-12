@@ -14,6 +14,7 @@ from distutils.util import strtobool
 from nnpf.problems import MeanCurvatureProblem
 import nnpf.shapes as shapes
 import nnpf.visu as visu
+from nnpf.domain import Domain
 
 # Command-line arguments
 parser = argparse.ArgumentParser(
@@ -27,6 +28,7 @@ parser.add_argument("--max_frames", type=int, default=-1, help="Maximum number o
 parser.add_argument("--max_duration", type=float, default=-1, help="Maximum duration of the animation (-1 for illimited")
 parser.add_argument("--scalars", type=str, choices=["u", "dist", "check"], nargs='*', default=["dist"], help="Scalars to be displayed")
 parser.add_argument("--scale", type=float, default=1., help="Initial shape scale")
+parser.add_argument("--domain_scale", type=float, default=1., help="Domain scale (from model domain)")
 parser.add_argument("--shape", type=str, choices=["one", "two", "three"], default="one", help="Initial shape")
 parser.add_argument("--lp_shape", type=float, help="lp norm used to define the initial shapes (default to model.hparams.lp)")
 parser.add_argument("--lp_check", type=float, help="lp norm used to check the distance (default to model.hparams.lp)")
@@ -57,6 +59,11 @@ if args.gpu:
     model.cuda()
 
 domain = model.domain
+scaled_N = [int(round(N * args.domain_scale)) for N in domain.N]
+scaled_bounds = [
+    (a - dx * ((sN - N) // 2), b + dx * (sN - N - (sN - N) // 2))
+    for (a, b), dx, N, sN in zip(domain.bounds, domain.dX, domain.N, scaled_N)]
+domain = Domain(scaled_bounds, scaled_N, domain.device)
 
 # Defining initial shape
 bounds = domain.bounds
