@@ -9,6 +9,7 @@ from nnpf.utils import get_default_args
 from nnpf.problems import Problem
 from nnpf.domain import Domain
 from nnpf.functional import norm
+import nnpf.shapes as shapes
 from .datasets import MCSphereDataset, MCSphereLazyDataset
 from .utils import check_sphere_mass
 
@@ -105,6 +106,10 @@ class MeanCurvatureProblem(Problem):
         """ Time evolution of the radius of the sphere """
         ...
 
+    def shape(self, radius, center, p=2):
+        """ Reference shape (sphere by design or any shape with same signature) """
+        return shapes.sphere(radius, center, p)
+
     @property
     def domain(self):
         return Domain(self.hparams.bounds, self.hparams.N, device=self.device)
@@ -174,7 +179,8 @@ class MeanCurvatureProblem(Problem):
                     self.sphere_radius,
                     self.profil,
                     self, self.domain, r, self.hparams.epsilon, self.hparams.dt,
-                    n, center, p=self.hparams.lp, progress_bar=progress_bar)
+                    n, center, p=self.hparams.lp, progress_bar=progress_bar,
+                    shape=self.shape)
                 model_mass.append(mm)
                 exact_mass.append(em)
 
@@ -241,6 +247,7 @@ class MeanCurvatureProblem(Problem):
                 lp=self.hparams.lp,
                 steps=steps,
                 reverse=torch.rand(num_samples) < reverse,
+                shape=self.shape,
             )
 
         self.train_dataset = generate_data(self.hparams.train_N, self.hparams.train_steps, self.hparams.train_reverse)

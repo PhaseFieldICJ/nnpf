@@ -39,6 +39,8 @@ class MCSphereLazyDataset(Dataset):
         Number of evolution steps applied to each input
     reverse: bool or Tensor of bool
         Reverse phase's inside and outside
+    shape: function(radius, center, p)
+        Reference shape (sphere by design so that any other shape must have the save signature)
 
     Examples
     --------
@@ -114,9 +116,10 @@ class MCSphereLazyDataset(Dataset):
     True
     """
 
-    def __init__(self, sphere_radius, profil, X, radius, center, epsilon, dt, lp=2, steps=1, reverse=False):
+    def __init__(self, sphere_radius, profil, X, radius, center, epsilon, dt, lp=2, steps=1, reverse=False, shape=shapes.sphere):
         self.sphere_radius = sphere_radius
         self.profil = profil
+        self.shape = shape
 
         # Additionnal dimensions for appropriate broadcasting
         dim = X[0].ndim
@@ -153,7 +156,7 @@ class MCSphereLazyDataset(Dataset):
         sign = 1. - 2. * self.reverse[idx, ...]
         return tuple(
             self.profil(
-                sign * shapes.sphere(
+                sign * self.shape(
                     self.sphere_radius(
                         self.radius[idx, ...],
                         i * self.dt[idx, ...],
