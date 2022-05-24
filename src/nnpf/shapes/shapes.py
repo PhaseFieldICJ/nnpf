@@ -25,6 +25,7 @@ __all__ = [
     "box_wireframe",
     "mobius_strip",
     "cross",
+    "regular_polygon",
 ]
 
 
@@ -512,6 +513,58 @@ def cross(radius=1., arms=4, dots_only=False):
                 torch.clamp(length * torch.cos(theta) - radius, min=0),
                 length * torch.sin(theta)
             ])
+
+    return dist
+
+def regular_polygon(n, outer_radius=None, inner_radius=None, theta=None, phase=None):
+    """
+    Signed distance to a regular polygon
+
+    Parameters
+    ----------
+    n: int
+        Number of sides
+    outer_radius, inner_radius: float
+        Outer or inner radius of the polygon.
+        Default is outer_radius=1
+    theta, phase: float
+        Rotate shape by specified angle or by phase * 2pi/n.
+        Default is theta=0
+
+    Example:
+    >>> from nnpf.domain import Domain
+    >>> from nnpf.shapes import shapes
+    >>> domain = Domain([[-1, 1]] * 2, [256] * 2)
+    >>> s = regular_polygon(7, inner_radius=0.5, phase=0.3)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    """
+    assert outer_radius is None or inner_radius is None, "Cannot specify both inter and outer radius!"
+    assert theta is None or phase is None, "Cannot specify both theta and phase parametes!"
+
+    alpha = 2 * math.pi / n
+    if inner_radius is None:
+        if outer_radius is None:
+            outer_radius = 1
+        inner_radius = outer_radius * math.cos(alpha / 2)
+    else:
+        outer_radius = inner_radius / math.cos(alpha / 2)
+    half_side = outer_radius * math.sin(alpha / 2)
+
+    if phase is not None:
+        theta = phase * alpha
+    elif theta is None:
+        theta = 0
+
+    def dist(*X):
+        assert len(X) == 2, "Signed distance to a regular polygon is defined in 2D only!"
+        normal_angle = (((torch.atan2(X[1], X[0]) - theta) / alpha).floor() + 0.5) * alpha + theta
+        normal = [torch.cos(normal_angle), torch.sin(normal_angle)]
+        tangent = [-normal[1], normal[0]]
+        x = dot_product(X, normal) - inner_radius
+        y = (dot_product(X, tangent).abs() - half_side).clamp(0)
+        return torch.copysign((x**2 + y**2).sqrt(), x)
 
     return dist
 
