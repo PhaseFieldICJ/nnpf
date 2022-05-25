@@ -30,7 +30,7 @@ parser.add_argument("--scalars", type=str, choices=["u", "dist", "check"], nargs
 parser.add_argument("--scale", type=float, default=1., help="Initial shape scale")
 parser.add_argument("--domain_scale", type=float, default=1., help="Domain scale (from model domain)")
 parser.add_argument("--shape", type=str, choices=["one", "two", "three"], default="one", help="Initial configuration of the shapes")
-parser.add_argument("--shape_type", type=str, choices=["model", "sphere"], default="model", help="Initial shape")
+parser.add_argument("--shape_type", type=str, choices=["model", "sphere", "square"], default="model", help="Initial shape")
 parser.add_argument("--lp_shape", type=float, help="lp norm used to define the initial shapes (default to model.hparams.lp)")
 parser.add_argument("--lp_check", type=float, help="lp norm used to check the distance (default to model.hparams.lp)")
 parser.add_argument("--offscreen", action="store_true", help="Don't display the animation (but still saving")
@@ -94,6 +94,8 @@ if args.shape_type == "model":
     init_shape = model.shape
 elif args.shape_type == "sphere":
     init_shape = shapes.sphere
+elif args.shape_type == "square":
+    init_shape = lambda r, c, l: shapes.translation(shapes.regular_polygon(4, outer_radius=r, phase=0.5), c)
 
 s = shapes.union(*(init_shape(radius(p[0], args.scale), pos(p[1:], args.scale), args.lp_shape) for p in spheres))
 dist_sol = lambda t: reduce(torch.min, [model.shape(model.sphere_radius(radius(p[0], args.scale), t), pos(p[1:], args.scale), args.lp_shape)(*domain.X) for p in spheres])
