@@ -311,6 +311,8 @@ class MeanCurvatureProblem(Problem):
         group.add_argument('--val_N', type=int, help="Number of initial conditions in the validation dataset")
         group.add_argument('--train_steps', type=int, help="Number of evolution steps in the training dataset")
         group.add_argument('--val_steps', type=int, help="Number of evolution steps in the validation dataset")
+        group.add_argument('--train_reverse', type=float, help="Probability of having a sample with reversed inside and outside in training dataset")
+        group.add_argument('--val_reverse', type=float, help="Probability of having a sample with reversed inside and outside in validation dataset")
         group.add_argument('--radius', type=float, nargs=2, help="Bounds on sphere radius (ratio of domain bounds) used for training and validation dataset.")
         group.add_argument('--lp', type=int_or_float, help="Power of the lp-norm used to define the spheres for training and validation dataset.")
         group.add_argument('--batch_size', type=int, help="Size of batch")
