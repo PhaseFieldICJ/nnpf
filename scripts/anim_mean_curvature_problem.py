@@ -29,7 +29,8 @@ parser.add_argument("--max_duration", type=float, default=-1, help="Maximum dura
 parser.add_argument("--scalars", type=str, choices=["u", "dist", "check"], nargs='*', default=["dist"], help="Scalars to be displayed")
 parser.add_argument("--scale", type=float, default=1., help="Initial shape scale")
 parser.add_argument("--domain_scale", type=float, default=1., help="Domain scale (from model domain)")
-parser.add_argument("--shape", type=str, choices=["one", "two", "three"], default="one", help="Initial shape")
+parser.add_argument("--shape", type=str, choices=["one", "two", "three"], default="one", help="Initial configuration of the shapes")
+parser.add_argument("--shape_type", type=str, choices=["model", "sphere"], default="model", help="Initial shape")
 parser.add_argument("--lp_shape", type=float, help="lp norm used to define the initial shapes (default to model.hparams.lp)")
 parser.add_argument("--lp_check", type=float, help="lp norm used to check the distance (default to model.hparams.lp)")
 parser.add_argument("--offscreen", action="store_true", help="Don't display the animation (but still saving")
@@ -89,8 +90,13 @@ elif args.shape == "two":
 elif args.shape == "three":
     spheres = [(0.1, 0.2, 0.2), (0.2, 0.3, 0.7), (0.05, 0.7, 0.3)]
 
-s = shapes.union(*(shapes.sphere(radius(p[0], args.scale), pos(p[1:], args.scale), args.lp_shape) for p in spheres))
-dist_sol = lambda t: reduce(torch.min, [shapes.sphere(model.sphere_radius(radius(p[0], args.scale), t), pos(p[1:], args.scale), args.lp_shape)(*domain.X) for p in spheres])
+if args.shape_type == "model":
+    init_shape = model.shape
+elif args.shape_type == "sphere":
+    init_shape = shapes.sphere
+
+s = shapes.union(*(init_shape(radius(p[0], args.scale), pos(p[1:], args.scale), args.lp_shape) for p in spheres))
+dist_sol = lambda t: reduce(torch.min, [model.shape(model.sphere_radius(radius(p[0], args.scale), t), pos(p[1:], args.scale), args.lp_shape)(*domain.X) for p in spheres])
 
 # Periodizing
 s = shapes.periodic(s, bounds)
