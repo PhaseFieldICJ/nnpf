@@ -153,7 +153,10 @@ class MCSphereLazyDataset(Dataset):
         return self.num_samples
 
     def __getitem__(self, idx):
+        # Flip coordinates and inside/outside
         sign = 1. - 2. * self.reverse[idx, ...]
+        X = [c + sign * (x - c) for x, c in zip(self.X, self.center[:, idx, ...])]
+
         return tuple(
             self.profil(
                 sign * self.shape(
@@ -163,7 +166,7 @@ class MCSphereLazyDataset(Dataset):
                     ),
                     self.center[:, idx, ...],
                     self.lp,
-                )(*self.X),
+                )(*X),
                 self.epsilon[idx, ...],
             )
             for i in range(self.steps + 1))
