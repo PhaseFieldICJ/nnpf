@@ -33,6 +33,7 @@ __all__ = [
     "expand_dim",
     "twist",
     "fit",
+    "point_reflection",
 ]
 
 
@@ -95,8 +96,9 @@ def translation(shape, shift):
 
     return dist
 
-def scaling(shape, s):
+def scaling(shape, s, eps=1e-30):
     """ Scale shape by given factor """
+    s = torch.max(torch.as_tensor(s), torch.as_tensor(eps))
     def dist(*X):
         return shape(*(x / s for x in X)) * s
 
@@ -465,4 +467,44 @@ def fit(shape, from_bounds, to_bounds):
     shift = [t - f * scale for f, t in zip(from_center, to_center)]
 
     return translation(scaling(shape, scale), shift)
+
+def point_reflection(shape, dims=None, center=None):
+    """
+    Apply a point reflection to a given shape.
+
+    Parameters
+    ----------
+    shape: function
+        Shape to be modified
+    dims: None or iterable of int
+        Dimensions on which reflection will be applied (all dimensions if None)
+    center: None or iterable of float
+        Center of reflection
+
+    Example
+    -------
+    >>> from nnpf.domain import Domain
+    >>> from nnpf import shapes
+    >>> domain = Domain([[-1, 1], [0, 2]], [256, 256])
+    >>> s = shapes.point_reflection(
+    ...     shapes.translation(
+    ...         shapes.regular_polygon(3, outer_radius=0.7),
+    ...         [0, 1],
+    ...     ), center=[0, 1])
+    >>> ref_s = shapes.translation(
+    ...     shapes.regular_polygon(3, outer_radius=0.7, phase=0.5),
+    ...     [0, 1],
+    ... )
+    >>> torch.allclose(s(*domain.X), ref_s(*domain.X), atol=1e-7)
+    True
+    """
+
+    def dist(*X):
+        curr_dims = dims or list(range(len(X)))
+        curr_center = center or [0.] * len(X)
+        assert len(curr_dims) <= len(X), "Cannot have more dims than space dimension!"
+        assert len(curr_center) == len(X), "Center point should have same dimension than the space!"
+        return shape(*(2 * c - x if d in curr_dims else x for d, (x, c) in enumerate(zip(X, curr_center))))
+
+    return dist
 
