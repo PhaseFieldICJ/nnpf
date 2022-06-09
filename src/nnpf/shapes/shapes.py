@@ -26,6 +26,7 @@ __all__ = [
     "mobius_strip",
     "cross",
     "regular_polygon",
+    "lemon",
 ]
 
 
@@ -567,4 +568,66 @@ def regular_polygon(n, outer_radius=None, inner_radius=None, theta=None, phase=N
         return torch.copysign((x**2 + y**2).sqrt(), x)
 
     return dist
+
+def lemon(radius=1., theta=math.pi/4, dim_or_axis=0):
+    """
+    Signed distance to a kind of lemon shape
+
+    Parameters
+    ----------
+    radius: float
+        Radius of the spherical part of the lemon
+    theta: float
+        Angle of the cone at each side of the main axis, in [0, pi/2)
+    dim_or_axis: int or iterable
+        If integer, dimension of the main axis
+        If iterable, main axis of the shape
+
+    Example:
+    >>> from nnpf.domain import Domain
+    >>> from nnpf.shapes import shapes
+    >>> domain = Domain([[-1, 1]] * 2, [256] * 2)
+    >>> s = lemon(radius=0.5, dim_or_axis=1)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+
+    >>> domain = Domain([[-1, 1]] * 3, [64] * 3)
+    >>> s = lemon(radius=0.5, dim_or_axis=[0.1, 0.2, 0.3], theta=0.5)
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    """
+    radius = torch.as_tensor(radius)
+    theta = torch.as_tensor(theta)
+    dim_or_axis = torch.as_tensor(dim_or_axis)
+
+    # Project coordinates on a slice
+    if dim_or_axis.ndim == 0:
+        def proj(*X):
+            return X[dim_or_axis].abs(), norm((X[d] for d in range(len(X)) if d != dim_or_axis))
+    else:
+        dim_or_axis /= dim_or_axis.norm()
+        def proj(*X):
+            assert len(X) == dim_or_axis.shape[0], "Dimension of space and axis mismatch!"
+            X1 = dot_product(X, dim_or_axis)
+            return X1.abs(), norm((X[d] - X1 * dim_or_axis[d] for d in range(len(X))))
+
+    theta_normal = [torch.cos(theta), torch.sin(theta)]
+    theta_tan = theta_normal[1] / theta_normal[0]
+    head_length = radius * theta_tan
+
+    def dist(*X):
+        d = torch.empty_like(X[0])
+        x, y = proj(*X)
+        mask = y >= x * theta_tan
+        d[mask] = norm((x[mask], y[mask])) - radius
+        xp = x[~mask] * theta_normal[0] + y[~mask] * theta_normal[1] - radius
+        yp = -x[~mask] * theta_normal[1] + y[~mask] * theta_normal[0]
+        d[~mask] = norm((xp, (-yp - head_length).clamp(0))).copysign(xp)
+
+        return d
+
+    return dist
+
 
