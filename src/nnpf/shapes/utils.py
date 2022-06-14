@@ -9,6 +9,7 @@ import torch
 __all__ = [
     "norm",
     "dot_product",
+    "sqr_norm",
     "gradient_norm",
     "check_dist",
 ]
@@ -49,6 +50,11 @@ def dot_product(A, B):
     """
     return sum(a * b for a, b in zip(A, B))
 
+def sqr_norm(A):
+    """
+    Returns the squared norm of a given iterable
+    """
+    return sum(a**2 for a in A)
 
 def gradient_norm(dist, dX, p=2):
     """
