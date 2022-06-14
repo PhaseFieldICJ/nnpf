@@ -1,5 +1,7 @@
 """
 Signed distances functions
+
+Heavily inspired from Inigo Quilez articles: https://iquilezles.org/articles/
 """
 
 import torch
@@ -27,6 +29,7 @@ __all__ = [
     "cross",
     "regular_polygon",
     "lemon",
+    "polygon",
 ]
 
 
@@ -630,4 +633,46 @@ def lemon(radius=1., theta=math.pi/4, dim_or_axis=0):
 
     return dist
 
+def polygon(vertices):
+    """
+    Signed distance to an arbitrary polygon in 2D
+
+    From https://iquilezles.org/articles/distfunctions2d/
+
+    Parameters
+    ----------
+    verticles: iterable of 2D points
+        List of the vertices of the polygon.
+    
+    Example:
+    >>> from nnpf.domain import Domain
+    >>> from nnpf.shapes import shapes
+    >>> domain = Domain([[-1, 1]] * 2, [256] * 2)
+    >>> s = shapes.polygon([[0, 0], [0.5, 0.3], [-0.7, 0.2], [-0.2, -0.6], [0.5, -0.1]])
+    >>> dist = s(*domain.X)
+    >>> check_dist(dist, domain.dX).item() < 0.05
+    True
+    """
+
+    vertices = [torch.as_tensor(v) for v in vertices]
+    assert all(v.numel() == 2 for v in vertices), "Arbitrary polygons only defined in 2D!"
+
+    def dist(*X):
+        assert len(X) == 2, "Arbitrary polygons only defined in 2D!"
+        d = sqr_norm((x - vx for x, vx in zip(X, vertices[0])))
+        s = torch.ones_like(X[0])
+        for i in range(len(vertices)):
+            j = (i + len(vertices) - 1) % len(vertices)
+            e = vertices[j] - vertices[i]
+            w = [x - vx for x, vx in zip(X, vertices[i])]
+            b_clamp = torch.clamp(dot_product(w, e) / e.dot(e), 0, 1)
+            b = [wx - ex * b_clamp for wx, ex in zip(w, e)]
+            d = torch.min(d, sqr_norm(b))
+            c = [X[1] >= vertices[i][1], X[1] < vertices[j][1], e[0] * w[1] > e[1] * w[0]]
+            mask = (c[0] & c[1] & c[2]) | (~c[0] & ~c[1] & ~c[2])
+            s[mask] *= -1
+
+        return s * torch.sqrt(d)
+
+    return dist
 
