@@ -63,7 +63,7 @@ def slice_shape(shape, bounds, positions, axis=1, step=1e-4, threshold=0., insid
             if state == "outside":
                 curr_slice.append(crossing_pos)
                 state = "inside"
-            elif values[c + 1] > 0:
+            elif values[c + 1] < 0:
                 curr_slice.append(crossing_pos)
                 state = "outside"
 
