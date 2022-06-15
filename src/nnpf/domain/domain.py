@@ -103,6 +103,29 @@ class Domain:
         """ Space steps """
         return torch.Tensor([(b - a) / (n - 1) for (a, b), n in zip(self.bounds, self.N)])
 
+    def index(self, *X):
+        """ Returns discretization indexes from given spatial coordinates
+
+        Examples
+        --------
+        >>> from nnpf.domain import Domain
+        >>> domain = Domain([[-1, 2], [0.5, 3]], [256, 128])
+        >>> domain.index(-0.2, 1.2)
+        (tensor(68), tensor(36))
+        >>> domain[68, 36]
+        (tensor(-0.2000), tensor(1.2087))
+        >>> all(torch.equal(x1, x2) for x1, x2 in zip(domain.X, domain[domain.index(domain.X)]))
+        True
+        """
+        if len(X) == 1 and isinstance(X[0], tuple):
+            X = X[0]
+
+        return tuple(((torch.as_tensor(x) - a) / dx + 0.5).long() for x, (a, b), dx in zip(X, self.bounds, self.dX))
+
+    def __getitem__(self, idx):
+        """ Array indexing for spatial coordinates (same as using X property) """
+        return tuple(x[idx] for x in self.X)
+
     @property
     def K(self):
         """
