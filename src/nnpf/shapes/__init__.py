@@ -67,4 +67,4 @@ Some visualization and norm check:
 from .shapes import *
 from .utils import *
 from .operators import *
-
+from .slices import *

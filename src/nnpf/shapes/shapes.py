@@ -643,7 +643,7 @@ def polygon(vertices):
     ----------
     verticles: iterable of 2D points
         List of the vertices of the polygon.
-    
+
     Example:
     >>> from nnpf.domain import Domain
     >>> from nnpf.shapes import shapes
