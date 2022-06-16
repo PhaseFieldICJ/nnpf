@@ -4,6 +4,8 @@ Tools for slicing and reconstruction of 2D shapes
 
 import torch
 
+import nnpf.shapes as shapes
+
 __all__ = [
     "slice_shape",
     "slices_to_mask",
@@ -199,12 +201,5 @@ def slices_to_shape(slices, strategy="box"):
         # Move to the next vertex in the same slice
         vertex_id += 1 if vertex_id % 2 == 0 else -1
 
-    return polygon
-
-
-
-
-
-
-
+    return shapes.polygon(polygon)
 
