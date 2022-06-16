@@ -7,6 +7,7 @@ import torch
 __all__ = [
     "slice_shape",
     "slices_to_mask",
+    "slices_to_shape",
 ]
 
 def slice_shape(shape, bounds, positions, axis=1, step=1e-4, threshold=0., inside=-1.):
@@ -69,9 +70,9 @@ def slice_shape(shape, bounds, positions, axis=1, step=1e-4, threshold=0., insid
 
         curr_slice.append(X_along[-1])
         if axis == 0:
-            slices.append((torch.as_tensor(curr_slice), pos))
-        else:
             slices.append((pos, torch.as_tensor(curr_slice)))
+        else:
+            slices.append((torch.as_tensor(curr_slice), pos))
 
     return slices
 
@@ -126,4 +127,84 @@ def slices_to_mask(slices, domain, shrink=0):
     outside[inside] = False
 
     return inside, outside
+
+def slices_to_shape(slices, strategy="box"):
+    assert strategy == "box", "Only box reconstruction strategy is implemented so far!"
+
+    import bisect
+
+    def get_axis(s):
+        s = tuple(torch.as_tensor(x) for x in s)
+        if s[0].numel() == 1:
+            return 1
+        elif s[1].numel() == 1:
+            return 0
+        else:
+            raise ValueError(f"Invalid slice {s}!")
+
+    def merge_vertices(A, B):
+        return sorted(A + B, key=lambda i: i[0])
+
+    axis = get_axis(slices[0])
+
+    # Creates all vertices from the axis-aligned boxes
+    # The second value indicates how to change slice in order to find
+    # the corresponding vertex
+    vertices = [[]] * (len(slices) + 1)
+    for i, s in enumerate(slices):
+        assert get_axis(s) == axis, "All slice must be along same axis!"
+        vertices[i] = merge_vertices(vertices[i], [(pos, 1) for pos in s[axis][1:-1]])
+        vertices[i + 1] = merge_vertices(vertices[i + 1], [(pos, -1) for pos in s[axis][1:-1]])
+
+    # Joining them all using orthogonal sides
+    slice_id = next(i for i, v in enumerate(vertices) if len(v) > 0)
+    vertex_id = 0
+    polygon = []
+
+    def add_curr_vertex():
+        # Creates new vertex
+        if slice_id == 0:
+            pos = 0.5 * (3 * slices[0][1 - axis] - slices[-1][1 - axis])
+        elif slice_id == len(vertices) - 1:
+            pos = 0.5 * (3 * slices[-1][1 - axis] - slices[-2][1 - axis])
+        else:
+            pos = 0.5 * (slices[slice_id - 1][1 - axis] + slices[slice_id][1 - axis])
+
+        vertex = (pos, vertices[slice_id][vertex_id][0])
+        if axis == 0:
+            vertex = vertex[::-1]
+
+        # Add it if polygon is not finished and if not the same as the last one
+        if len(polygon) > 0 and polygon[0] == vertex:
+            return False
+        if len(polygon) == 0 or polygon[-1] != vertex:
+            polygon.append(vertex)
+        return True
+
+    while True:
+        if not add_curr_vertex():
+            break
+
+        # Move to the next vertex in an adjacent slice
+        curr_pos, curr_way = vertices[slice_id][vertex_id]
+        slice_id += curr_way
+        vertex_id = bisect.bisect_left([v[0] for v in vertices[slice_id]], curr_pos)
+        candidates = list(i for i, v in enumerate(vertices[slice_id][vertex_id:]) if v[0] == curr_pos and v[1] == -curr_way)
+        # To avoid going back to the same point at edges of the initial shape
+        vertex_id += candidates[0] if curr_way > 0 else candidates[-1]
+
+        if not add_curr_vertex():
+            break
+
+        # Move to the next vertex in the same slice
+        vertex_id += 1 if vertex_id % 2 == 0 else -1
+
+    return polygon
+
+
+
+
+
+
+
 
