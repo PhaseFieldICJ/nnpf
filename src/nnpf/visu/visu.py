@@ -313,11 +313,18 @@ class DistanceShow(ImShow):
         super().update(self._get_array(shape_or_dist))
 
 
-def get_frame(fig=None):
+def get_frame(fig=None, **savefig_kwargs):
     """ Returns given figure as image """
-    canvas = (fig or plt.gcf()).canvas
-    return np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8) \
-             .reshape(canvas.get_width_height()[::-1] + (3,))
+    if fig is None:
+        fig = plt.gcf()
+
+    # From https://stackoverflow.com/a/61443397
+    from io import BytesIO
+    with BytesIO() as buff:
+        fig.savefig(buff, format="raw", **savefig_kwargs)
+        buff.seek(0)
+        return np.frombuffer(buff.getvalue(), dtype=np.uint8) \
+                .reshape(fig.canvas.get_width_height()[::-1] + (-1,))
 
 
 class PhaseFieldShow(ImShow):
