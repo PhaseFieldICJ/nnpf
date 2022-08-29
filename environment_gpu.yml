@@ -1,15 +1,15 @@
 name: nnpf_gpu
 channels:
-  - defaults
   - pytorch
+  - defaults
   - conda-forge
 dependencies:
   - numpy
   - matplotlib
   - jupyter
-  - pytorch>=1.7.0,<=1.8.1
+  - pytorch>=1.7.0,<=1.12.1
   - torchvision>=0.8.1
-  - cudatoolkit=10.2
+  - cudatoolkit=11.3
   - torchmetrics=0.6.0
   - pytorch-lightning=1.4.5
   - tqdm
