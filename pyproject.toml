@@ -1,7 +1,46 @@
 [build-system]
 requires = [
-    "setuptools>=42",
+    "setuptools>=64",
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "nnpf"
+version = "1.0.0"
+description = "Neural Network for Phase-Field models"
+readme = "README.md"
+authors = [{name = "Roland DENIS", email = "denis@math.univ-lyon1.fr"}, {name = "Garry TERII"}]
+maintainers = [{name = "Roland DENIS", email = "denis@math.univ-lyon1.fr"}]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+keywords = ["phase field", "mean curvature", "neural network"]
+dependencies = [
+   "numpy",
+   "matplotlib",
+   "torch >= 1.7.0, <= 1.12.1",
+   "torchvision >= 0.8.1",
+   "torchmetrics < 0.8.0", # 0.8.0 is incompatible with lightning < 1.5.0
+   "pytorch-lightning == 1.4.5",
+   "tqdm",
+   "imageio",
+   "imageio-ffmpeg",
+   "torchinfo",
+   "pytest",
+]
+requires-python = ">=3.8"
+
+[project.urls]
+homepage = "https://plmlab.math.cnrs.fr/phase-field-icj/nn-phase-field"
+repository = "https://plmlab.math.cnrs.fr/phase-field-icj/nn-phase-field"
+"Bug Tracker" = "https://plmlab.math.cnrs.fr/phase-field-icj/nn-phase-field/-/issues"
+
+[project.scripts]
+nnpf = "nnpf.cmd:actions"
 
