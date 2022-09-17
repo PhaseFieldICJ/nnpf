@@ -2,8 +2,8 @@
 
 **Download** or clone this repository:
 ```bash
-git clone https://plmlab.math.cnrs.fr/phase-field-icj/nn-phase-field.git
-cd nn-phase-field
+git clone https://github.com/PhaseFieldICJ/nnpf
+cd nnpf
 ```
 
 **Install** miniconda or anaconda, then prepare an environment:

@@ -37,9 +37,9 @@ dependencies = [
 requires-python = ">=3.8"
 
 [project.urls]
-homepage = "https://plmlab.math.cnrs.fr/phase-field-icj/nn-phase-field"
-repository = "https://plmlab.math.cnrs.fr/phase-field-icj/nn-phase-field"
-"Bug Tracker" = "https://plmlab.math.cnrs.fr/phase-field-icj/nn-phase-field/-/issues"
+homepage = "https://github.com/PhaseFieldICJ/nnpf"
+repository = "https://github.com/PhaseFieldICJ/nnpf"
+"Bug Tracker" = "https://github.com/PhaseFieldICJ/nnpf/issues"
 
 [project.scripts]
 nnpf = "nnpf.cmd:actions"
