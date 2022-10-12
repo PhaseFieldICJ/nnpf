@@ -96,7 +96,7 @@ class Domain:
         It actually returns a view on repetitions of 1D tensors so that it is memory efficient.
         Thus, returned tensors should not be modified!
         """
-        return torch.meshgrid(*(torch.linspace(a, b, n, device=self.device) for (a, b), n in zip(self.bounds, self.N)))
+        return torch.meshgrid(*(torch.linspace(a, b, n, device=self.device) for (a, b), n in zip(self.bounds, self.N)), indexing='ij')
 
     @property
     def dX(self):
@@ -138,7 +138,7 @@ class Domain:
         """
         k = [fftfreq(n, (b - a) / n, device=self.device) for (a, b), n in zip(self.bounds[:-1], self.N[:-1])] \
              + [rfftfreq(self.N[-1], (self.bounds[-1][1] - self.bounds[-1][0]) / self.N[-1], device=self.device)]
-        return torch.meshgrid(*k)
+        return torch.meshgrid(*k, indexing='ij')
 
     def _check_real_shape(self, u):
         assert u.shape[-self.dim:] == torch.Size(self.spatial_shape), "Input shape doesn't match domain shape"

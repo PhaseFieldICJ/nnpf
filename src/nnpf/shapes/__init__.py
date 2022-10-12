@@ -6,7 +6,7 @@ Example
 
 Centered sphere:
 >>> import torch
->>> X, Y = torch.meshgrid(torch.linspace(0, 1, 5), torch.linspace(0, 1, 5))
+>>> X, Y = torch.meshgrid(torch.linspace(0, 1, 5), torch.linspace(0, 1, 5), indexing='ij')
 >>> s = sphere(0.25, [0.5, 0.5])
 >>> s(X, Y)
 tensor([[ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571],
@@ -32,7 +32,7 @@ Distance calculation for multiple spheres at once:
 torch.Size([10, 5, 5])
 
 Distance to two spheres:
->>> X, Y = torch.meshgrid(torch.linspace(0, 2, 9), torch.linspace(0, 1, 5))
+>>> X, Y = torch.meshgrid(torch.linspace(0, 2, 9), torch.linspace(0, 1, 5), indexing='ij')
 >>> s2 = union(s, translation(s, (1, 0)))
 >>> s2(X, Y)
 tensor([[ 0.4571,  0.3090,  0.2500,  0.3090,  0.4571],
