@@ -64,7 +64,7 @@ def get_weight(weight_or_module):
 def weight_center(weight_or_module):
     """ Gravity center of the given weight """
     weight = get_weight(weight_or_module).squeeze()
-    weight_coords = torch.meshgrid(*(torch.arange(n) for n in weight.shape))
+    weight_coords = torch.meshgrid(*(torch.arange(n) for n in weight.shape), indexing='ij')
     return [(coords * weight).sum() / weight.sum() for coords in weight_coords]
 
 

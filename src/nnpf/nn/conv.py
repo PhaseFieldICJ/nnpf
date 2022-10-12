@@ -246,7 +246,7 @@ class ConvolutionFunction(Module):
         # 3) flatten each index array
         # 4) concatenate each index vectors
         #device = next(self.function.parameters()).device
-        #tmp = torch.meshgrid(*(torch.arange(s, dtype=torch.float, device=device) - (s-1)/2 for s in self.kernel_size))
+        #tmp = torch.meshgrid(*(torch.arange(s, dtype=torch.float, device=device) - (s-1)/2 for s in self.kernel_size), indexing='ij')
         #self.pos = torch.cat((torch.flatten(index) for index in tmp), dim=1).view(-1, 1, dim)
         #self.pos = torch.tensor(flat_meshgrid(*(np.arange(s) - (s-1)/2 for s in self.kernel_size)), dtype=torch.float, device=device)
         self.pos = torch.Tensor(flat_meshgrid(*(np.arange(s) - (s-1)/2 for s in self.kernel_size)))

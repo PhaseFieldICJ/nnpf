@@ -8,7 +8,7 @@ dependencies:
   - numpy
   - matplotlib
   - jupyter
-  - pytorch>=1.7.0,<=1.12.1
+  - pytorch>=1.10.0,<=1.12.1
   - torchvision>=0.8.1
   - cpuonly
   - torchmetrics<0.8.0
