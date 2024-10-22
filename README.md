@@ -1,5 +1,17 @@
 # Quick Start
 
+## Python
+
+This package requires a Python **version between 3.8 and 3.10** (versions above have not been tested).
+
+You can use a currently installed Python or, for example, **create a miniconda/anaconda environment**:
+```bash
+conda create --name nnpf python=3.10
+conda activate nnpf
+```
+
+If you need a specific computation platform context, like an older CUDA version or the support of ROCm, you should install PyTorch manually using the instructions available on the [official website](https://pytorch.org/get-started/locally/).
+
 ## Install from Pypi
 
 ```bash
@@ -14,35 +26,10 @@ git clone https://github.com/PhaseFieldICJ/nnpf
 cd nnpf
 ```
 
-**Install** miniconda or anaconda, then prepare an environment:
-- for CPU only:
-```bash
-conda env create -f environment_cpu.yml
-conda activate nnpf_cpu
-```
-- for CPU and GPU:
-```bash
-conda env create -f environment_gpu.yml
-conda activate nnpf_gpu
-```
-
-To **update** instead an already created environement:
-```bash
-conda env update -f environment_cpu.yml
-```
-and/or
-```bash
-conda env update -f environment_gpu.yml
-```
-depending on which environment you already have.
-
-
 **Install** the nnpf module:
 ```bash
 pip install .
 ```
-
-**Note** that you can pass the conda environment creation step and just rely on `pip` to download the dependencies.
 
 You can now move in your **working directory**.
 

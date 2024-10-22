@@ -26,12 +26,13 @@ classifiers = [
 ]
 keywords = ["phase field", "mean curvature", "neural network"]
 dependencies = [
-   "numpy",
+   "numpy < 2",
    "matplotlib",
    "torch >= 1.10.0, <= 1.12.1",
    "torchvision >= 0.8.1",
    "torchmetrics < 0.8.0", # 0.8.0 is incompatible with lightning < 1.5.0
    "pytorch-lightning == 1.4.5",
+   "tensorboard < 2.12",
    "tqdm",
    "imageio",
    "imageio-ffmpeg",
