@@ -37,8 +37,17 @@ class ImShow:
         if X is not None and extent is None:
             extent = [X[0].min(), X[0].max(), X[1].min(), X[1].max()]
 
+        def to_numpy_image(img):
+            if isinstance(img, torch.Tensor):
+                return img.detach().cpu().numpy()
+            return img
+        def sanitize_extent(extent):
+            if isinstance(extent, (list, tuple)):
+                return [float(e) if hasattr(e, '__float__') else float(e.item()) for e in extent]
+            return extent
+
         self.ax, self.fig = get_axe_fig(ax, fig)
-        self.graph = self.ax.imshow(self._get_img(img), *args, origin="lower", extent=extent, **kwargs)
+        self.graph = self.ax.imshow(to_numpy_image(self._get_img(img)), *args, origin="lower", extent=sanitize_extent(extent), **kwargs)
 
     def update(self, img):
         self.graph.set_array(self._get_img(img))
