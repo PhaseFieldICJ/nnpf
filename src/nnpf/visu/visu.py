@@ -429,7 +429,7 @@ class AnimWriter:
             return
 
         if isinstance(fig_or_img, matplotlib.figure.Figure):
-            self.writer.append_data(get_frame(fig))
+            self.writer.append_data(get_frame(fig_or_img))
         elif fig_or_img is None:
             self.writer.append_data(get_frame(plt.gcf()))
         else:
