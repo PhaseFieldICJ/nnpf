@@ -72,7 +72,8 @@ class TensorBoardScalars:
         value: numpy.ndarray
             Value of each sample
         """
-        wall_time, step, value = map(lambda d: np.asarray(d), zip(*self.events.Scalars(name)))
+        scalars = ((s.wall_time, s.step, s.value) for s in self.events.Scalars(name))
+        wall_time, step, value = map(lambda d: np.asarray(d), zip(*scalars))
         rel_time = wall_time - self.events.FirstEventTimestamp()
         return wall_time, rel_time, step, value
 

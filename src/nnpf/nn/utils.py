@@ -251,7 +251,7 @@ def display_model_infos(model_or_path, recursive=True, use_torch_info=True, inpu
         map_location = torch.device("cpu")
         checkpoint_path = checkpoint_from_path(model_or_path)
         model = Problem.load_from_checkpoint(checkpoint_path, map_location=map_location)
-        extra_data = torch.load(checkpoint_path, map_location=map_location)
+        extra_data = torch.load(checkpoint_path, map_location=map_location, weights_only=False)
 
         try:
             best_infos = next(value for callback, value in extra_data['callbacks'].items() if callback.__name__ == 'ModelCheckpoint')

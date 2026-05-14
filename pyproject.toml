@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nnpf"
-version = "1.0.2"
+version = "1.0.3"
 description = "Neural Network for Phase-Field models"
 readme = "README.md"
 authors = [
@@ -28,18 +28,19 @@ keywords = ["phase field", "mean curvature", "neural network"]
 dependencies = [
    "numpy < 2",
    "matplotlib",
-   "torch >= 1.10.0, <= 1.12.1",
-   "torchvision >= 0.8.1",
+   "torch >= 1.10.0, < 2.6", # torch 2.6 set weights_only to True by defaut in torch.load
+   "torchvision >= 0.8.1, <= 0.20.1", # 0.20.1 is the last version supported by torch 2.5.1
    "torchmetrics < 0.8.0", # 0.8.0 is incompatible with lightning < 1.5.0
    "pytorch-lightning == 1.4.5",
-   "tensorboard < 2.12",
+   "tensorboard",
    "tqdm",
    "imageio",
    "imageio-ffmpeg",
    "torchinfo",
    "pytest",
+   "setuptools<=80", # higher versions have warnings or errors with torchmetrics < 0.8.0
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 
 [project.urls]
 homepage = "https://github.com/PhaseFieldICJ/nnpf"

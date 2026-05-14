@@ -94,7 +94,7 @@ class Problem(pl.LightningModule):
         checkpoint_path = checkpoint_from_path(checkpoint_path)
 
         # Forward to the right class if current class's name doesn't match
-        checkpoint = torch.load(checkpoint_path, map_location=map_location)
+        checkpoint = torch.load(checkpoint_path, map_location=map_location, weights_only=False)
         if cls.__name__ != checkpoint["class_name"].split('.')[-1]:
             model_cls = get_model_by_name((checkpoint["class_path"] or "") + ":" + checkpoint["class_name"])
             # Check that we load a model from the current problem
