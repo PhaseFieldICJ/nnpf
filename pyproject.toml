@@ -40,7 +40,7 @@ dependencies = [
    "pytest",
    "setuptools<=80", # higher versions have warnings or errors with torchmetrics < 0.8.0
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.10, <3.13"
 
 [project.urls]
 homepage = "https://github.com/PhaseFieldICJ/nnpf"
