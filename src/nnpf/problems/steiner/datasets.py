@@ -14,12 +14,14 @@ class SteinerSphereLazyDataset(mcp.MCSphereLazyDataset):
 
     See documentation of mean_curvature_problem.MCSphereLazyDataset
     """
-    def __init__(self, X, radius, center, epsilon, dt, lp=2, steps=1, reverse=False):
+    def __init__(self, *args, **kwargs):
         from nnpf.problems import SteinerProblem
         super().__init__(
             SteinerProblem.sphere_dist,
             SteinerProblem.profil,
-            X, radius, center, epsilon, dt, lp, steps, reverse)
+            *args,
+            **kwargs,
+        )
 
 
 class SteinerSphereDataset(TensorDataset):

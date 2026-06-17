@@ -14,12 +14,14 @@ class ACSphereLazyDataset(mcp.MCSphereLazyDataset):
 
     See documentation of mean_curvature_problem.MCSphereLazyDataset
     """
-    def __init__(self, X, radius, center, epsilon, dt, lp=2, steps=1, reverse=False):
+    def __init__(self, *args, **kwargs):
         from nnpf.problems import AllenCahnProblem
         super().__init__(
             AllenCahnProblem.sphere_dist,
             AllenCahnProblem.profil,
-            X, radius, center, epsilon, dt, lp, steps, reverse)
+            *args,
+            **kwargs,
+        )
 
 
 class ACSphereDataset(TensorDataset):

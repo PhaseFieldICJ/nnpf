@@ -51,6 +51,8 @@ class MeanCurvatureProblem(Problem):
         Bounds on sphere radius (ratio of domain bounds) used for training and validation datasets.
     lp: int or float
         Power of the lp-norm used to defined the spheres in training and validation datasets.
+    theta: float
+        Rotation in (e1, e2) applied to the generated training and validation datasets.
     train_N, val_N: int
         Size of the training and validation datasets
     train_steps, val_steps: int
@@ -64,7 +66,7 @@ class MeanCurvatureProblem(Problem):
     def __init__(self, bounds=[[0., 1.], [0., 1.]], N=256, epsilon=2/256, dt=None,
                  batch_size=10, batch_shuffle=True, lr=1e-4,
                  loss_norms=None, loss_power=2.,
-                 radius=[0.05, 0.45], lp=2,
+                 radius=[0.05, 0.45], lp=2, theta=0,
                  train_N=100, train_steps=1, train_reverse=0.,
                  val_N=200, val_steps=5, val_reverse=0.,
                  use_lazy_datasets=False, num_workers=0,
@@ -80,7 +82,7 @@ class MeanCurvatureProblem(Problem):
         self.save_hyperparameters(
             'bounds', 'N', 'dt', 'epsilon',
             'batch_size', 'batch_shuffle', 'lr', 'loss_norms', 'loss_power',
-            'radius', 'lp', 'train_N', 'val_N', 'train_steps', 'val_steps',
+            'radius', 'lp', 'theta', 'train_N', 'val_N', 'train_steps', 'val_steps',
             'train_reverse', 'val_reverse', 'use_lazy_datasets',
             'num_workers',
         )
@@ -106,7 +108,7 @@ class MeanCurvatureProblem(Problem):
         """ Time evolution of the radius of the sphere """
         ...
 
-    def shape(self, radius, center, p=2):
+    def shape(self, radius, center=None, p=2):
         """ Reference shape (sphere by design or any shape with same signature) """
         return shapes.sphere(radius, center, p)
 
@@ -179,7 +181,8 @@ class MeanCurvatureProblem(Problem):
                     self.sphere_radius,
                     self.profil,
                     self, self.domain, r, self.hparams.epsilon, self.hparams.dt,
-                    n, center, p=self.hparams.lp, progress_bar=progress_bar,
+                    n, center, p=self.hparams.lp, theta=self.hparams.theta,
+                    progress_bar=progress_bar,
                     shape=self.shape)
                 model_mass.append(mm)
                 exact_mass.append(em)
@@ -245,6 +248,7 @@ class MeanCurvatureProblem(Problem):
                 epsilon=self.hparams.epsilon,
                 dt=self.hparams.dt,
                 lp=self.hparams.lp,
+                theta=self.hparams.theta,
                 steps=steps,
                 reverse=torch.rand(num_samples) < reverse,
                 shape=self.shape,
@@ -315,6 +319,7 @@ class MeanCurvatureProblem(Problem):
         group.add_argument('--val_reverse', type=float, help="Probability of having a sample with reversed inside and outside in validation dataset")
         group.add_argument('--radius', type=float, nargs=2, help="Bounds on sphere radius (ratio of domain bounds) used for training and validation dataset.")
         group.add_argument('--lp', type=int_or_float, help="Power of the lp-norm used to define the spheres for training and validation dataset.")
+        group.add_argument('--theta', type=float, help="Rotation in (e1, e2) applied to the generated training and validation datasets.")
         group.add_argument('--batch_size', type=int, help="Size of batch")
         group.add_argument('--batch_shuffle', type=lambda v: bool(strtobool(v)), nargs='?', const=True, help="Shuffle batch")
         group.add_argument('--lr', type=float, help="Learning rate")

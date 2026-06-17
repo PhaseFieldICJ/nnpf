@@ -7,7 +7,7 @@ __all__ = [
 ]
 
 
-def check_sphere_mass(sphere_radius, profil, model, domain, r0, epsilon, dt, num_steps=None, center=None, p=2, progress_bar=False, shape=shapes.sphere):
+def check_sphere_mass(sphere_radius, profil, model, domain, r0, epsilon, dt, num_steps=None, center=None, p=2, theta=0, progress_bar=False, shape=shapes.sphere):
     """
     Check a mean curvature model by measuring the decreasing of the mass of the profil associated to a sphere (or other compatible shape).
 
@@ -34,6 +34,8 @@ def check_sphere_mass(sphere_radius, profil, model, domain, r0, epsilon, dt, num
         Sphere center (domain center if None)
     p: int, float or float("inf")
         Power in the lp-norm
+    theta: float
+        Rotation in (e1, e2) applied to the shape
     progress_bar: bool
         True to display a progress bar
     shape: function(radius, center, p)
@@ -51,7 +53,13 @@ def check_sphere_mass(sphere_radius, profil, model, domain, r0, epsilon, dt, num
     center = center or [0.5 * sum(b) for b in domain.bounds]
 
     def generate_solution(radius):
-        return profil(shape(radius, center, p=p)(*domain.X), epsilon)[None, None, ...]
+        curr_shape = shapes.translation(
+            shapes.rotate(
+                shape(radius, p=p),
+                theta,
+            ), center,
+        )
+        return profil(curr_shape(*domain.X), epsilon)[None, None, ...]
 
     def mass(u):
         return domain.dX.prod() * u.sum()

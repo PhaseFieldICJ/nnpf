@@ -35,6 +35,8 @@ class MCSphereLazyDataset(Dataset):
         Interface sharpness in phase field model
     p: int, float or float("inf")
         Power in the lp-norm
+    theta: float
+        Rotation in (e1, e2) applied to the shape
     steps: int
         Number of evolution steps applied to each input
     reverse: bool or Tensor of bool
@@ -116,7 +118,7 @@ class MCSphereLazyDataset(Dataset):
     True
     """
 
-    def __init__(self, sphere_radius, profil, X, radius, center, epsilon, dt, lp=2, steps=1, reverse=False, shape=shapes.sphere):
+    def __init__(self, sphere_radius, profil, X, radius, center, epsilon, dt, lp=2, theta=0., steps=1, reverse=False, shape=shapes.sphere):
         self.sphere_radius = sphere_radius
         self.profil = profil
         self.shape = shape
@@ -141,6 +143,7 @@ class MCSphereLazyDataset(Dataset):
 
         self.X = X
         self.lp = lp
+        self.theta = theta
         self.steps = steps
         self.radius = radius.expand(self.num_samples, *sup_dims)
         self.center = center.expand(dim, self.num_samples, *sup_dims)
@@ -156,17 +159,23 @@ class MCSphereLazyDataset(Dataset):
         # Flip coordinates and inside/outside
         sign = 1. - 2. * self.reverse[idx, ...]
         X = [c + sign * (x - c) for x, c in zip(self.X, self.center[:, idx, ...])]
+        
+        def build_shape(i: int):
+            radius: float = self.sphere_radius(
+                self.radius[idx, ...],
+                i * self.dt[idx, ...],
+            )
+            shape = shapes.translation(
+                    shapes.rotate(
+                        self.shape(radius, p=self.lp),
+                        self.theta,
+                    ), self.center[:, idx, ...],
+            )
+            return shape
 
         return tuple(
             self.profil(
-                sign * self.shape(
-                    self.sphere_radius(
-                        self.radius[idx, ...],
-                        i * self.dt[idx, ...],
-                    ),
-                    self.center[:, idx, ...],
-                    self.lp,
-                )(*X),
+                sign * build_shape(i)(*X),
                 self.epsilon[idx, ...],
             )
             for i in range(self.steps + 1))
