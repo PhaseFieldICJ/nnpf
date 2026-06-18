@@ -4,7 +4,7 @@
 
 This package requires a Python **version between 3.8 and 3.10** (versions above have not been tested).
 
-You can use a currently installed Python or, for example, **create a miniconda/anaconda environment**:
+You can use a currently installed Python or, for example, **create a conda environment**:
 ```bash
 conda create --name nnpf python=3.10
 conda activate nnpf
@@ -150,4 +150,11 @@ Using a configuration file in YAML format:
 ```bash
 nnpf train model.py:ModelDR --config config.yml
 ```
+
+# Change log
+
+## Version 1.1.0
+
+- fixing dependency versions so that it can be installed on up-to-date OS,
+- adding theta parameter to rotate the training/validation dataset.
 
