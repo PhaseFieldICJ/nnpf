@@ -2,7 +2,7 @@
 
 ## Python
 
-This package requires a Python **version between 3.8 and 3.10** (versions above have not been tested).
+This package requires a Python **version between 3.10 and 3.12** (versions above have not been tested).
 
 You can use a currently installed Python or, for example, **create a conda environment**:
 ```bash
