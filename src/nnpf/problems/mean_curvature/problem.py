@@ -171,10 +171,17 @@ class MeanCurvatureProblem(Problem):
         num_steps += [num_steps[-1]] * (len(num_steps) - len(radius))
 
         domain_diameter = min(b[1] - b[0] for b in self.domain.bounds)
-        model_mass, exact_mass = [], []
 
+        # Reducing radius depending on the rotation theta
+        import math
+        r_scale = math.sqrt(2.) * max(
+            math.cos(math.pi / 4 + self.hparams.theta),
+            math.sin(math.pi / 4 + self.hparams.theta),
+        )
+
+        model_mass, exact_mass = [], []
         for r, n in zip(radius, num_steps):
-            r = r * domain_diameter
+            r = r / r_scale * domain_diameter
 
             with torch.no_grad():
                 mm, em = check_sphere_mass(
