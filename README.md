@@ -153,6 +153,10 @@ nnpf train model.py:ModelDR --config config.yml
 
 # Change log
 
+## Version 1.1.1
+
+- fixing radius of Wulff shape when customizing data orientation (and in anisotropical case).
+
 ## Version 1.1.0
 
 - fixing dependency versions so that it can be installed on up-to-date OS,
